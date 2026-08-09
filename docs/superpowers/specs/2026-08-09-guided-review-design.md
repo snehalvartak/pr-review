@@ -2,6 +2,9 @@
 
 Date: 2026-08-09
 
+_Note: shipped as the `reviewing-ai-diffs` skill — "guided-review" below was
+the working name during design._
+
 ## Problem
 
 Reviewing AI-generated code is harder than reviewing human-written code, even

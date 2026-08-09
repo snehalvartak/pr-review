@@ -1,5 +1,5 @@
 ---
-name: guided-review
+name: reviewing-ai-diffs
 description: Use when reviewing AI-generated code changes (a diff, working tree changes, or a branch) and the size or unfamiliarity of the change makes it hard to spot subtly-wrong-but-plausible-looking code, or when a diff spans multiple files/concerns and reviewing it all at once would be overwhelming.
 ---
 
@@ -29,15 +29,15 @@ comprehension and catching plausible-but-wrong code under review fatigue.
 Default: diff of working tree against `HEAD` (`git diff HEAD`) — staged and
 unstaged combined.
 
-- `guided-review branch` — diff current branch against its base (e.g. `main`).
-- `guided-review <commit-range or description>` — user-specified scope.
+- `reviewing-ai-diffs branch` — diff current branch against its base (e.g. `main`).
+- `reviewing-ai-diffs <commit-range or description>` — user-specified scope.
 
 If the diff is empty, say so and stop. Don't proceed to chunking.
 
 ## The Loop
 
 ```dot
-digraph guided_review {
+digraph reviewing_ai_diffs {
     "Compute diff" -> "Split into intent chunks";
     "Split into intent chunks" -> "Ask: intent order or risk-first order?";
     "Ask: intent order or risk-first order?" -> "Next chunk";
