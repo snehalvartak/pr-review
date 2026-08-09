@@ -3,7 +3,7 @@ name: reviewing-ai-diffs
 description: Use when reviewing AI-generated code changes (a diff, working tree changes, or a branch) and the size or unfamiliarity of the change makes it hard to spot subtly-wrong-but-plausible-looking code, or when a diff spans multiple files/concerns and reviewing it all at once would be overwhelming.
 ---
 
-# Guided Review
+# Reviewing AI Diffs
 
 ## Overview
 
@@ -20,9 +20,10 @@ second opinion on top of your own.
 - The diff spans multiple files or concerns, or you don't have full context
   on why each part was written.
 
-Not for: style/over-engineering review (use `ponytail-review`), or spec-vs-
-standards review of a finished PR (use `code-review`). This skill is about
-comprehension and catching plausible-but-wrong code under review fatigue.
+Not for: style or over-engineering review, or spec-vs-standards review of a
+finished PR — use a dedicated review skill for those if you have one. This
+skill is about comprehension and catching plausible-but-wrong code under
+review fatigue.
 
 ## Scope
 
@@ -33,6 +34,10 @@ unstaged combined.
 - `reviewing-ai-diffs <commit-range or description>` — user-specified scope.
 
 If the diff is empty, say so and stop. Don't proceed to chunking.
+
+If a state file from an interrupted review of this same diff exists (see
+step 4), offer to resume — skip chunks already approved, re-present the
+rest.
 
 ## The Loop
 
@@ -54,7 +59,10 @@ digraph reviewing_ai_diffs {
 
 One chunk = one coherent piece of work (e.g. "added retry logic to the
 fetch client"), even if it spans multiple files. Never chunk by file — that
-reintroduces the overload the skill exists to prevent.
+reintroduces the overload the skill exists to prevent. If a single intent
+still exceeds roughly a screenful (~150 changed lines or ~5 files), split
+it into sub-chunks under the same intent — a chunk the user can't scan in
+one look defeats the point.
 
 Intent source, in priority order:
 1. A plan/spec doc for the work, a linked issue, or recent commit messages
@@ -74,20 +82,32 @@ Ask the user once, before the first chunk: review in **intent order**
 (riskiest chunk first)? This is a real question requiring a real answer —
 wait for it before presenting chunk 1, even if the user is in a hurry.
 Noting the default and moving on without waiting is the same mistake as
-skipping the question outright. Don't re-ask per chunk.
+skipping the question outright. Don't re-ask per chunk. Skip the question
+only if the user already named an ordering when invoking (e.g.
+`reviewing-ai-diffs risk-first`).
 
 ### 2. Independent check, before showing the user anything
 
-For each chunk, dispatch a subagent with **only the chunk's diff and
-surrounding code** — not the conversation history, not the stated intent,
-not why it was written. Ask it to actively try to break the chunk: edge
-cases, error/null handling, off-by-one, and specifically whether the code's
-actual behavior matches what its stated intent claims. It must return either
-concrete doubts or an explicit "no issues found" — never a rubber stamp.
+For each chunk, dispatch a subagent with the chunk's diff, its surrounding
+code, and the **call sites of any changed functions** (grep for callers —
+contract changes like a new `None` return or flipped indexing only show up
+at the callers). Give it nothing else: not the conversation history, not
+the stated intent, not why the code was written. This independence is the
+point — a subagent with no stake in the code being right, and no exposure
+to the narrative that justified it, catches what a same-context re-read
+misses.
 
-This independence is the point: a subagent with no stake in the code being
-right, and no exposure to the narrative that justified it, catches what a
-same-context re-read misses.
+Ask it to return two things:
+1. **What the code appears to do**, in its own words. Back in the main
+   loop, compare this against the chunk's "Why" — a mismatch between
+   apparent behavior and stated intent is itself a top-ranked doubt.
+2. **Concrete doubts** — edge cases, error/null handling, off-by-one,
+   contract changes visible at call sites — or an explicit "no issues
+   found". Never a rubber stamp.
+
+While the user reads the current chunk, you may pre-dispatch the next
+chunk's check in the background to cut waiting between chunks; discard and
+re-run it if a fix-now edit touched that chunk's files.
 
 ### 3. Present the chunk
 
@@ -107,6 +127,12 @@ as confirmed bugs — or "Independent check found nothing." if clean>
 <short inline code excerpt only if it helps, not the full diff>
 ```
 
+Cap **Worth checking** at the three most material doubts, ranked — relaying
+every doubt the subagent raised recreates the overload this skill exists to
+prevent. An intent-vs-apparent-behavior mismatch always makes the cut;
+style-level nits never do (out of scope here). If real doubts were cut by
+the cap, end the list with "…and N lower-priority doubts — ask to see them."
+
 ### 4. Take the user's response
 
 One of:
@@ -118,14 +144,20 @@ One of:
 
 Advance only on an explicit approve or flag-and-move-on — never auto-advance.
 
+After each verdict, append one line — chunk name, verdict, any note — to a
+state file **outside the working tree** (e.g. `.git/review-state.md`; never
+inside the tree, where it would pollute the very diff under review). This
+is what makes an interrupted review resumable and feeds the wrap-up.
+
 ### 5. Wrap up
 
-After the last chunk, summarize:
+After the last chunk, summarize from the state file:
 - Chunks approved as-is.
 - Chunks flagged, with the user's note.
 - Subagent doubts raised but never resolved.
 
-Offer to fix any flagged/unresolved items immediately. Then offer — once,
+Delete the state file — the review is done. Offer to fix any
+flagged/unresolved items immediately. Then offer — once,
 not per-chunk — to publish the summary as an HTML Artifact if the user wants
 a persistent record; otherwise the markdown summary in chat is the whole
 deliverable.
@@ -138,4 +170,6 @@ deliverable.
 | Skipping the independent subagent check to save time | It's the step that catches plausible-but-wrong code; the walkthrough's value collapses without it |
 | Presenting all chunks in one message | One chunk, one message, wait for the user's response before the next |
 | Subagent's doubts stated as confirmed bugs | Frame as "worth checking" — the subagent can be wrong too |
+| Relaying every subagent doubt verbatim | Three most material, ranked — a wall of maybes is its own overload |
+| Giving the subagent only the diff hunk, no callers | Contract changes (new `None` return, flipped indexing) are invisible without call sites |
 | Asking the ordering question but not waiting for an answer (e.g. defaulting and mentioning the alternative as an aside) because the user seems rushed, or re-asking it every chunk | Ask once, at the start, and wait — "in a hurry" is exactly the pressure this skill is designed to hold up under |
