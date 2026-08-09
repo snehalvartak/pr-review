@@ -57,14 +57,17 @@ fetch client"), even if it spans multiple files. Never chunk by file — that
 reintroduces the overload the skill exists to prevent.
 
 Intent source, in priority order:
-1. A plan/spec doc for the work, or recent commit messages — use as ground
-   truth for what each chunk is for.
+1. A plan/spec doc for the work, a linked issue, or recent commit messages
+   — use as ground truth for what each chunk is for.
 2. Otherwise, infer intent from the diff itself, and state the inferred
    intent explicitly in the chunk (see template below) so the user can
    correct it if it's wrong.
 
-Tag each chunk with a risk category: `core-logic` / `data-mutation` /
-`auth` (high) vs. `boilerplate` / `formatting` / `tests` (low).
+Tag each chunk with a risk category, e.g. `core-logic` / `data-mutation` /
+`auth` (high) vs. `boilerplate` / `formatting` / `tests` (low) — these are
+illustrative, not an exhaustive list; use whatever label fits the change.
+Compute the risk tag independent of which ordering the user picks next, so
+the tag isn't biased by the order chosen.
 
 Ask the user once, before the first chunk: review in **intent order**
 (default — mirrors how a human would narrate a PR) or **risk-first**
@@ -135,5 +138,4 @@ deliverable.
 | Skipping the independent subagent check to save time | It's the step that catches plausible-but-wrong code; the walkthrough's value collapses without it |
 | Presenting all chunks in one message | One chunk, one message, wait for the user's response before the next |
 | Subagent's doubts stated as confirmed bugs | Frame as "worth checking" — the subagent can be wrong too |
-| Re-asking intent-vs-risk-first ordering every chunk | Ask once, at the start, only |
-| Defaulting to intent order and mentioning risk-first as an aside, without waiting for an answer, because the user seems rushed | Ask and wait — "in a hurry" is exactly the pressure this skill is designed to hold up under |
+| Asking the ordering question but not waiting for an answer (e.g. defaulting and mentioning the alternative as an aside) because the user seems rushed, or re-asking it every chunk | Ask once, at the start, and wait — "in a hurry" is exactly the pressure this skill is designed to hold up under |
