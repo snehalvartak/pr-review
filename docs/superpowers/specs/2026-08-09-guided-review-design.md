@@ -101,6 +101,23 @@ After the last chunk, produce a short summary:
 
 Then offer to immediately fix any flagged/unresolved items, if there are any.
 
+### Presentation format
+
+Everything runs in the Claude Code chat itself — no separate browser/UI
+infra, so the finished skill stays portable as a plugin (no dependency on
+Superpowers' brainstorming-session server, which is a design-time tool, not
+a runtime one).
+
+- **Per-chunk loop:** plain markdown, in a consistent structured template —
+  heading (chunk name + risk tag), "What changed" bullets, "Why" line,
+  "Worth checking" doubts, a short inline code excerpt (not the raw diff).
+  Markdown renders natively in the chat and keeps every chunk scannable in
+  the same shape.
+- **Wrap-up summary:** markdown by default. If the user wants a persistent
+  record afterward, offer to additionally publish it as an HTML Artifact —
+  a nicer static page for sharing/revisiting later. This is optional and
+  only offered once, after the loop completes, not per-chunk.
+
 ## Open questions / future work
 
 - Publishing this as a shareable Claude Code plugin on GitHub (stated goal,
