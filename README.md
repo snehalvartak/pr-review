@@ -35,5 +35,5 @@ wraps up the review at the end.
 
 See [`skills/reviewing-ai-diffs/SKILL.md`](skills/reviewing-ai-diffs/SKILL.md)
 for the full process, and
-[`docs/superpowers/specs/2026-08-09-guided-review-design.md`](docs/superpowers/specs/2026-08-09-guided-review-design.md)
+[`docs/2026-08-09-guided-review-design.md`](docs/2026-08-09-guided-review-design.md)
 for the design rationale.
