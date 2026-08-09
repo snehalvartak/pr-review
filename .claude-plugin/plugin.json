@@ -1,0 +1,8 @@
+{
+  "name": "guided-review",
+  "version": "0.1.0",
+  "description": "Walks AI-generated diffs one intent-grouped chunk at a time, each independently checked by a subagent, so review never faces the whole diff at once.",
+  "skills": [
+    "./skills/guided-review"
+  ]
+}
