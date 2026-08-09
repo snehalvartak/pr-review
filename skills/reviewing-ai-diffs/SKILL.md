@@ -35,25 +35,12 @@ unstaged combined.
 
 If the diff is empty, say so and stop. Don't proceed to chunking.
 
-If a state file from an interrupted review of this same diff exists (see
-step 4), offer to resume — skip chunks already approved, re-present the
-rest.
+If a state file from an interrupted review exists (see step 4) and its
+first line matches the current scope and diff hash, offer to resume — skip
+chunks already approved, re-present the rest. If the first line doesn't
+match, it's leftover from a different review — delete it and start fresh.
 
 ## The Loop
-
-```dot
-digraph reviewing_ai_diffs {
-    "Compute diff" -> "Split into intent chunks";
-    "Split into intent chunks" -> "Ask: intent order or risk-first order?";
-    "Ask: intent order or risk-first order?" -> "Next chunk";
-    "Next chunk" -> "Independent subagent check";
-    "Independent subagent check" -> "Present chunk to user";
-    "Present chunk to user" -> "User responds";
-    "User responds" -> "Next chunk" [label="approve / flag"];
-    "User responds" -> "Present chunk to user" [label="question / fix-now"];
-    "Next chunk" -> "Wrap-up" [label="no chunks left"];
-}
-```
 
 ### 1. Split the diff into intent chunks
 
@@ -105,6 +92,10 @@ Ask it to return two things:
    contract changes visible at call sites — or an explicit "no issues
    found". Never a rubber stamp.
 
+Chunks whose risk tag is formatting- or boilerplate-only may share one
+batched check (a single subagent covering all of them); every other chunk
+gets its own dedicated check.
+
 While the user reads the current chunk, you may pre-dispatch the next
 chunk's check in the background to cut waiting between chunks; discard and
 re-run it if a fix-now edit touched that chunk's files.
@@ -138,22 +129,32 @@ the cap, end the list with "…and N lower-priority doubts — ask to see them."
 One of:
 - **Approve** → move to next chunk.
 - **Ask a question** → answer using the actual code, re-present the chunk.
+- **Correct the why** → the inferred intent was wrong; update it, re-rank
+  the doubts against the corrected intent (a mismatch doubt may dissolve —
+  or a new one may appear), re-present.
 - **Flag a concern** → record it, then move to next chunk (or fix now).
 - **Fix now** → edit the code, re-run the independent check (step 2) on the
-  new version, then re-present before moving on.
+  new version, then re-present before moving on. If the edit also touched
+  files from an already-approved chunk, mark that chunk `stale` in the
+  state file — it resurfaces in the wrap-up.
 
 Advance only on an explicit approve or flag-and-move-on — never auto-advance.
 
-After each verdict, append one line — chunk name, verdict, any note — to a
-state file **outside the working tree** (e.g. `.git/review-state.md`; never
-inside the tree, where it would pollute the very diff under review). This
-is what makes an interrupted review resumable and feeds the wrap-up.
+Keep a state file at `$(git rev-parse --git-dir)/review-state.md` — always
+outside the working tree (a path inside it would pollute the very diff
+under review), and correct even in worktrees where `.git` is a file. Its
+first line is the scope plus a hash of the diff (e.g.
+`git diff HEAD | shasum`), which is what makes resume detection safe. After
+each verdict, append one line: chunk name, verdict, any note. This is what
+makes an interrupted review resumable and feeds the wrap-up.
 
 ### 5. Wrap up
 
 After the last chunk, summarize from the state file:
 - Chunks approved as-is.
 - Chunks flagged, with the user's note.
+- Chunks marked `stale` (approved, then touched by a later fix) — these
+  need a re-look before merge.
 - Subagent doubts raised but never resolved.
 
 Delete the state file — the review is done. Offer to fix any
