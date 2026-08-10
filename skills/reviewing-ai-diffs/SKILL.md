@@ -64,14 +64,20 @@ illustrative, not an exhaustive list; use whatever label fits the change.
 Compute the risk tag independent of which ordering the user picks next, so
 the tag isn't biased by the order chosen.
 
-Ask the user once, before the first chunk: review in **intent order**
-(default — mirrors how a human would narrate a PR) or **risk-first**
-(riskiest chunk first)? This is a real question requiring a real answer —
-wait for it before presenting chunk 1, even if the user is in a hurry.
-Noting the default and moving on without waiting is the same mistake as
-skipping the question outright. Don't re-ask per chunk. Skip the question
-only if the user already named an ordering when invoking (e.g.
-`reviewing-ai-diffs risk-first`).
+Ask the user once, before the first chunk, two things — real questions
+requiring real answers; wait for both before presenting chunk 1, even if
+the user is in a hurry. Noting a default and moving on without waiting is
+the same mistake as skipping the question outright. Don't re-ask either
+per chunk.
+
+1. Review in **intent order** (default — mirrors how a human would narrate
+   a PR) or **risk-first** (riskiest chunk first)? Skip this one only if
+   the user already named an ordering when invoking (e.g.
+   `reviewing-ai-diffs risk-first`).
+2. Want a **live companion Artifact** — a diff-annotated page, updated
+   after every chunk as the review happens — alongside this chat, or just
+   the chat? Default: chat only. See step 5 for what the companion looks
+   like and why it has to start now, not at wrap-up, to be worth anything.
 
 ### 2. Independent check, before showing the user anything
 
@@ -148,6 +154,15 @@ first line is the scope plus a hash of the diff (e.g.
 each verdict, append one line: chunk name, verdict, any note. This is what
 makes an interrupted review resumable and feeds the wrap-up.
 
+If the companion Artifact was requested (step 1), redeploy it now too —
+right after the chunk is finalized, not while it's still being discussed,
+so it never shows a verdict that's still in flux. Append this chunk's
+section (see step 5 for the shape) to whatever the Artifact already has
+from earlier chunks; don't rebuild it from scratch each time. Share the
+link the first time it's published, then stay quiet about it — it's a
+side channel the user can check whenever they want, not something to
+narrate every chunk.
+
 ### 5. Wrap up
 
 After the last chunk, summarize from the state file:
@@ -158,21 +173,26 @@ After the last chunk, summarize from the state file:
 - Subagent doubts raised but never resolved.
 
 Delete the state file — the review is done. Offer to fix any
-flagged/unresolved items immediately. Then offer — once, not per-chunk — to
-publish the walkthrough as an HTML Artifact if the user wants a persistent,
-visual record; otherwise the markdown summary in chat is the whole
-deliverable.
+flagged/unresolved items immediately.
 
-The Artifact, if requested, is a diff-annotated walkthrough, not just the
-wrap-up summary: for each chunk, in the same order it was reviewed, render
-its diff hunk(s) with GitHub-style line coloring (added/removed) with that
-chunk's What Changed / Why / Worth Checking and final verdict (approved,
-flagged + note, or stale) anchored right next to its own hunk — never all
-commentary collected separately from the code. Reuse the diff text and
+If a companion Artifact has been running since step 1, this is its last
+update, not its first build: prepend the roll-up (chunks approved, chunks
+flagged with notes, chunks marked `stale`, doubts never resolved) above
+the per-chunk sections that were already published, and redeploy once
+more. If the user skipped the companion at step 1 and only wants a record
+now, offer once to build one retroactively from the state file — but say
+plainly that it's a wrap-up document at that point, not something that
+helped while reviewing; that's what step 1's question is for next time.
+
+Either way, the Artifact is a diff-annotated walkthrough, not prose about
+one: for each chunk, in the order it was reviewed, its diff hunk(s) with
+GitHub-style line coloring (added/removed) sit next to that chunk's What
+Changed / Why / Worth Checking and final verdict — anchored to the same
+hunk, never collected separately from the code. Built from diff text and
 chunk content already gathered during the loop; no re-fetching or
 re-analysis. Load the `artifact-design` skill (bundled with Claude
 Code/claude.ai, not part of this repo — it's the same skill the `Artifact`
-tool itself asks callers to load) before building it.
+tool itself asks callers to load) before building or updating it.
 
 ## Common Mistakes
 
@@ -184,5 +204,6 @@ tool itself asks callers to load) before building it.
 | Subagent's doubts stated as confirmed bugs | Frame as "worth checking" — the subagent can be wrong too |
 | Relaying every subagent doubt verbatim | Three most material, ranked — a wall of maybes is its own overload |
 | Giving the subagent only the diff hunk, no callers | Contract changes (new `None` return, flipped indexing) are invisible without call sites |
-| Asking the ordering question but not waiting for an answer (e.g. defaulting and mentioning the alternative as an aside) because the user seems rushed, or re-asking it every chunk | Ask once, at the start, and wait — "in a hurry" is exactly the pressure this skill is designed to hold up under |
-| Building the wrap-up Artifact as prose with the diff as an afterthought | Anchor each chunk's explanation next to its own diff hunk, styled like a PR view — the diff is the point, not a caption under it |
+| Asking the ordering or companion-Artifact question but not waiting for an answer (e.g. defaulting and mentioning the alternative as an aside) because the user seems rushed, or re-asking either every chunk | Ask both once, at the start, and wait — "in a hurry" is exactly the pressure this skill is designed to hold up under |
+| Building the diff-annotated Artifact as prose with the diff as an afterthought | Anchor each chunk's explanation next to its own diff hunk, styled like a PR view — the diff is the point, not a caption under it |
+| Only offering the companion Artifact at wrap-up, after the user already reviewed the whole diff in chat | Ask at step 1, before chunk 1 — an artifact that only exists once the review is over never helped during the review |
