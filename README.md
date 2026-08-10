@@ -40,3 +40,9 @@ See [`skills/reviewing-ai-diffs/SKILL.md`](skills/reviewing-ai-diffs/SKILL.md)
 for the full process, and
 [`docs/2026-08-09-guided-review-design.md`](docs/2026-08-09-guided-review-design.md)
 for the design rationale.
+
+## Contributing
+
+Bug reports, feature requests, and pull requests are welcome — see
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for how to report issues and submit
+changes.
