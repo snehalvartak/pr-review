@@ -30,8 +30,9 @@ Ask Claude to review a diff, or invoke the skill directly:
 For each chunk you'll see what changed, why (from a plan/issue/commit
 message, or inferred), a risk tag, and anything an independent subagent
 found worth checking. Approve, ask questions, flag concerns, or ask for a
-fix before moving to the next chunk. A summary + optional shareable report
-wraps up the review at the end.
+fix before moving to the next chunk. A summary wraps up the review at the
+end, with an optional shareable Artifact that shows the diff itself
+alongside each chunk's explanation, GitHub-PR-style.
 
 See [`skills/reviewing-ai-diffs/SKILL.md`](skills/reviewing-ai-diffs/SKILL.md)
 for the full process, and

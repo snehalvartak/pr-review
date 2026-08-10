@@ -158,10 +158,19 @@ After the last chunk, summarize from the state file:
 - Subagent doubts raised but never resolved.
 
 Delete the state file — the review is done. Offer to fix any
-flagged/unresolved items immediately. Then offer — once,
-not per-chunk — to publish the summary as an HTML Artifact if the user wants
-a persistent record; otherwise the markdown summary in chat is the whole
+flagged/unresolved items immediately. Then offer — once, not per-chunk — to
+publish the walkthrough as an HTML Artifact if the user wants a persistent,
+visual record; otherwise the markdown summary in chat is the whole
 deliverable.
+
+The Artifact, if requested, is a diff-annotated walkthrough, not just the
+wrap-up summary: for each chunk, in the same order it was reviewed, render
+its diff hunk(s) with GitHub-style line coloring (added/removed) with that
+chunk's What Changed / Why / Worth Checking and final verdict (approved,
+flagged + note, or stale) anchored right next to its own hunk — never all
+commentary collected separately from the code. Reuse the diff text and
+chunk content already gathered during the loop; no re-fetching or
+re-analysis. Load the `artifact-design` skill before building it.
 
 ## Common Mistakes
 
@@ -174,3 +183,4 @@ deliverable.
 | Relaying every subagent doubt verbatim | Three most material, ranked — a wall of maybes is its own overload |
 | Giving the subagent only the diff hunk, no callers | Contract changes (new `None` return, flipped indexing) are invisible without call sites |
 | Asking the ordering question but not waiting for an answer (e.g. defaulting and mentioning the alternative as an aside) because the user seems rushed, or re-asking it every chunk | Ask once, at the start, and wait — "in a hurry" is exactly the pressure this skill is designed to hold up under |
+| Building the wrap-up Artifact as prose with the diff as an afterthought | Anchor each chunk's explanation next to its own diff hunk, styled like a PR view — the diff is the point, not a caption under it |

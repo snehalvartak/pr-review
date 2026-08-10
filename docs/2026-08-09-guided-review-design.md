@@ -118,8 +118,16 @@ a runtime one).
   the same shape.
 - **Wrap-up summary:** markdown by default. If the user wants a persistent
   record afterward, offer to additionally publish it as an HTML Artifact —
-  a nicer static page for sharing/revisiting later. This is optional and
-  only offered once, after the loop completes, not per-chunk.
+  optional, offered once after the loop completes, not per-chunk. The
+  Artifact renders the actual diff, not just prose about it: each chunk's
+  hunk(s) with GitHub-style added/removed line coloring, with that chunk's
+  What Changed / Why / Worth Checking and final verdict anchored next to it,
+  in the same order the chunks were reviewed. Still self-contained (an
+  Artifact, not a hosted app or GitHub round-trip) and built from content
+  already gathered during the loop — no re-fetching or re-analysis. Works
+  the same regardless of whether the diff came from a working tree, branch,
+  or PR, unlike posting comments through the GitHub API, which only applies
+  once a PR exists.
 
 ## Open questions / future work
 
