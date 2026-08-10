@@ -116,18 +116,20 @@ a runtime one).
   "Worth checking" doubts, a short inline code excerpt (not the raw diff).
   Markdown renders natively in the chat and keeps every chunk scannable in
   the same shape.
-- **Wrap-up summary:** markdown by default. If the user wants a persistent
-  record afterward, offer to additionally publish it as an HTML Artifact —
-  optional, offered once after the loop completes, not per-chunk. The
-  Artifact renders the actual diff, not just prose about it: each chunk's
-  hunk(s) with GitHub-style added/removed line coloring, with that chunk's
-  What Changed / Why / Worth Checking and final verdict anchored next to it,
-  in the same order the chunks were reviewed. Still self-contained (an
-  Artifact, not a hosted app or GitHub round-trip) and built from content
-  already gathered during the loop — no re-fetching or re-analysis. Works
-  the same regardless of whether the diff came from a working tree, branch,
-  or PR, unlike posting comments through the GitHub API, which only applies
-  once a PR exists.
+- **Wrap-up summary:** markdown by default, in chat.
+- **Companion Artifact (optional):** asked once, up front — before chunk 1,
+  not after the loop completes. An Artifact built once at wrap-up is a
+  report *about* a review that already happened in chat; it can't help
+  with the review itself. Asking up front instead means the diff, rendered
+  with GitHub-style added/removed line coloring, sits next to each chunk's
+  What Changed / Why / Worth Checking and verdict *while the user is still
+  making decisions*, updated (same URL, redeployed) after every chunk is
+  finalized rather than assembled once at the end. Still self-contained
+  (an Artifact, not a hosted app) and built from content already gathered
+  during the loop — no re-fetching or re-analysis. Works the same
+  regardless of whether the diff came from a working tree, branch, or PR,
+  unlike posting comments through the GitHub API, which only applies once
+  a PR exists.
 
 ## Open questions / future work
 

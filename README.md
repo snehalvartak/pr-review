@@ -27,12 +27,14 @@ Ask Claude to review a diff, or invoke the skill directly:
 - `/reviewing-ai-diffs branch` — reviews the current branch against its base.
 - `/reviewing-ai-diffs <commit-range or description>` — a custom scope.
 
-For each chunk you'll see what changed, why (from a plan/issue/commit
-message, or inferred), a risk tag, and anything an independent subagent
-found worth checking. Approve, ask questions, flag concerns, or ask for a
-fix before moving to the next chunk. A summary wraps up the review at the
-end, with an optional shareable Artifact that shows the diff itself
-alongside each chunk's explanation, GitHub-PR-style.
+Before the first chunk you're asked how to order chunks and whether you
+want a live companion Artifact — a page that shows the diff itself,
+GitHub-PR-style, alongside each chunk's explanation, updated as you go
+rather than only handed to you at the end. For each chunk you'll see what
+changed, why (from a plan/issue/commit message, or inferred), a risk tag,
+and anything an independent subagent found worth checking. Approve, ask
+questions, flag concerns, or ask for a fix before moving to the next
+chunk. A summary wraps up the review at the end.
 
 See [`skills/reviewing-ai-diffs/SKILL.md`](skills/reviewing-ai-diffs/SKILL.md)
 for the full process, and
