@@ -170,7 +170,9 @@ chunk's What Changed / Why / Worth Checking and final verdict (approved,
 flagged + note, or stale) anchored right next to its own hunk — never all
 commentary collected separately from the code. Reuse the diff text and
 chunk content already gathered during the loop; no re-fetching or
-re-analysis. Load the `artifact-design` skill before building it.
+re-analysis. Load the `artifact-design` skill (bundled with Claude
+Code/claude.ai, not part of this repo — it's the same skill the `Artifact`
+tool itself asks callers to load) before building it.
 
 ## Common Mistakes
 
