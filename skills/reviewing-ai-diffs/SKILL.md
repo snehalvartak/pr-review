@@ -55,8 +55,8 @@ Intent source, in priority order:
 1. A plan/spec doc for the work, a linked issue, or recent commit messages
    — use as ground truth for what each chunk is for.
 2. Otherwise, infer intent from the diff itself, and state the inferred
-   intent explicitly in the chunk (see template below) so the user can
-   correct it if it's wrong.
+   intent explicitly in the chunk (see step 3) so the user can correct it
+   if it's wrong.
 
 Tag each chunk with a risk category, e.g. `core-logic` / `data-mutation` /
 `auth` (high) vs. `boilerplate` / `formatting` / `tests` (low) — these are
@@ -94,9 +94,11 @@ Ask it to return two things:
 1. **What the code appears to do**, in its own words. Back in the main
    loop, compare this against the chunk's "Why" — a mismatch between
    apparent behavior and stated intent is itself a top-ranked doubt.
-2. **Concrete doubts** — edge cases, error/null handling, off-by-one,
-   contract changes visible at call sites — or an explicit "no issues
-   found". Never a rubber stamp.
+2. **Concrete doubts**, each anchored to a specific line, call, or node —
+   edge cases, error/null handling, off-by-one, contract changes visible
+   at call sites — or an explicit "no issues found". Never a rubber stamp.
+   The anchor is what lets a doubt be marked directly on the chunk's
+   diagram in step 3 instead of relayed as a separate sentence.
 
 Chunks whose risk tag is formatting- or boilerplate-only may share one
 batched check (a single subagent covering all of them); every other chunk
@@ -108,27 +110,48 @@ re-run it if a fix-now edit touched that chunk's files.
 
 ### 3. Present the chunk
 
-Use this template for every chunk — consistent shape keeps each one fast to
-scan regardless of how deep into the diff you are:
+Every chunk opens with the same one-line header — consistent shape keeps
+each one fast to scan regardless of how deep into the diff you are:
 
 ```markdown
 ## Chunk N: <short name> — risk: <risk tag>
-
-**What changed:** <2-4 bullets, concise, not a raw diff dump>
-
-**Why:** <the intent — from the plan/commits, or "(inferred)" if guessed>
-
-**Worth checking:** <subagent's doubts, phrased as questions to verify, not
-as confirmed bugs — or "Independent check found nothing." if clean>
-
-<short inline code excerpt only if it helps, not the full diff>
 ```
 
-Cap **Worth checking** at the three most material doubts, ranked — relaying
-every doubt the subagent raised recreates the overload this skill exists to
-prevent. An intent-vs-apparent-behavior mismatch always makes the cut;
-style-level nits never do (out of scope here). If real doubts were cut by
-the cap, end the list with "…and N lower-priority doubts — ask to see them."
+Add a **Why** line only if the intent isn't obvious from the header and
+diagram alone, or if it's inferred rather than sourced — mark
+"(inferred)" so the user can correct it. Skip it when the diagram already
+makes the intent self-evident; restating the obvious is exactly the kind
+of reading that adds up across chunks without adding signal.
+
+Then **one diagram** — never more than one — sized to the smallest shape
+that captures what actually changed:
+
+| Change shape | Diagram |
+|---|---|
+| Control/data flow (retry logic, auth check, request handling) | `mermaid` sequence diagram, or pseudocode |
+| New or changed call path | Call-tree sketch |
+| File layout, structural/module reorg | File tree |
+| UI/component structure | Component tree |
+| Mostly-new block the user needs verbatim/copyable | Plain code excerpt (not the full raw diff) |
+| Nothing above fits (e.g. a single constant/config value) | 2-4 concise prose bullets — the fallback, not the default |
+
+When most of the surrounding shape already existed before this chunk and
+only part of it changed, render that same diagram as a `diff` (only the
+changed lines/nodes marked, `+`/`-`, rest of the shape implied) instead of
+redrawing the whole thing — a one-line arithmetic fix inside an unchanged
+function is a two-line diff snippet, not a full pseudocode block. Show the
+whole shape, undiffed, only when most of it is new.
+
+Mark the subagent's doubts directly on the diagram, at the anchor from
+step 2 — an inline `⚠` note on the relevant line, node, or edge — instead
+of a separate "Worth checking" list. Cap at the three most material
+doubts, ranked: relaying every doubt the subagent raised recreates the
+overload this skill exists to prevent. An intent-vs-apparent-behavior
+mismatch always makes the cut; style-level nits never do (out of scope
+here). If doubts were cut by the cap, add one line below the diagram:
+"…and N lower-priority doubts — ask to see them." If the subagent found
+nothing, add no markers and end with one line — "Independent check:
+clean." — not a padded bullet list.
 
 ### 4. Take the user's response
 
@@ -186,13 +209,14 @@ helped while reviewing; that's what step 1's question is for next time.
 
 Either way, the Artifact is a diff-annotated walkthrough, not prose about
 one: for each chunk, in the order it was reviewed, its diff hunk(s) with
-GitHub-style line coloring (added/removed) sit next to that chunk's What
-Changed / Why / Worth Checking and final verdict — anchored to the same
-hunk, never collected separately from the code. Built from diff text and
-chunk content already gathered during the loop; no re-fetching or
-re-analysis. Load the `artifact-design` skill (bundled with Claude
-Code/claude.ai, not part of this repo — it's the same skill the `Artifact`
-tool itself asks callers to load) before building or updating it.
+GitHub-style line coloring (added/removed) sit next to the same diagram
+and Why line (if shown) used to present that chunk in chat, doubts marked
+in the same place, plus the final verdict — anchored to the same hunk,
+never collected separately from the code. Built from diff text and chunk
+content already gathered during the loop; no re-fetching or re-analysis.
+Load the `artifact-design` skill (bundled with Claude Code/claude.ai, not
+part of this repo — it's the same skill the `Artifact` tool itself asks
+callers to load) before building or updating it.
 
 ## Common Mistakes
 
@@ -201,9 +225,12 @@ tool itself asks callers to load) before building or updating it.
 | Chunking by file instead of by intent | Group by what changed *together for a reason*, even across files |
 | Skipping the independent subagent check to save time | It's the step that catches plausible-but-wrong code; the walkthrough's value collapses without it |
 | Presenting all chunks in one message | One chunk, one message, wait for the user's response before the next |
-| Subagent's doubts stated as confirmed bugs | Frame as "worth checking" — the subagent can be wrong too |
-| Relaying every subagent doubt verbatim | Three most material, ranked — a wall of maybes is its own overload |
+| Subagent's doubts stated as confirmed bugs | Mark as a doubt on the diagram, not a confirmed bug — the subagent can be wrong too |
+| Marking every subagent doubt on the diagram | Three most material, ranked — a wall of markers is its own overload |
 | Giving the subagent only the diff hunk, no callers | Contract changes (new `None` return, flipped indexing) are invisible without call sites |
+| Defaulting to prose bullets for a chunk | Prose is the fallback only when no diagram shape fits — pick the smallest matching diagram first |
+| Stacking more than one diagram for a single chunk | Pick one shape — the point is the smallest fitting view, not full coverage |
+| Writing a Why line when the diagram already makes intent obvious | Skip it — only state Why when it's non-obvious or inferred |
 | Asking the ordering or companion-Artifact question but not waiting for an answer (e.g. defaulting and mentioning the alternative as an aside) because the user seems rushed, or re-asking either every chunk | Ask both once, at the start, and wait — "in a hurry" is exactly the pressure this skill is designed to hold up under |
 | Building the diff-annotated Artifact as prose with the diff as an afterthought | Anchor each chunk's explanation next to its own diff hunk, styled like a PR view — the diff is the point, not a caption under it |
 | Only offering the companion Artifact at wrap-up, after the user already reviewed the whole diff in chat | Ask at step 1, before chunk 1 — an artifact that only exists once the review is over never helped during the review |
