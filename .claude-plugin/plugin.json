@@ -1,6 +1,6 @@
 {
   "name": "reviewing-ai-diffs",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Walks AI-generated diffs one intent-grouped chunk at a time, each independently checked by a subagent, so review never faces the whole diff at once.",
   "skills": [
     "./skills/reviewing-ai-diffs"
