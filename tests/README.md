@@ -16,6 +16,7 @@ independent-check step actually catches plausible-but-wrong code:
 **Passing run:** invoke the skill against this diff (e.g. apply it to a
 scratch repo, or hand the patch to a test agent). The skill passes if it
 presents two separate intent chunks — not one blob, not per-file — and the
-independent checks surface both planted issues in "Worth checking" (capped
-at three ranked doubts each). Exact wording will vary between runs; the two
-issues being caught is the bar.
+independent checks surface both planted issues, marked directly on each
+chunk's diagram (capped at three ranked doubts each). Exact wording and
+diagram choice will vary between runs; the two issues being caught, and
+visibly anchored to the code that causes them, is the bar.

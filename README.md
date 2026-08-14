@@ -30,11 +30,13 @@ Ask Claude to review a diff, or invoke the skill directly:
 Before the first chunk you're asked how to order chunks and whether you
 want a live companion Artifact — a page that shows the diff itself,
 GitHub-PR-style, alongside each chunk's explanation, updated as you go
-rather than only handed to you at the end. For each chunk you'll see what
-changed, why (from a plan/issue/commit message, or inferred), a risk tag,
-and anything an independent subagent found worth checking. Approve, ask
-questions, flag concerns, or ask for a fix before moving to the next
-chunk. A summary wraps up the review at the end.
+rather than only handed to you at the end. Each chunk is shown as a risk
+tag plus one small diagram sized to the shape of the change — a sequence
+diagram, a call tree, a file tree, a component tree, or a code excerpt,
+whichever is smallest and fits — with an independent subagent's doubts (if
+any) marked directly on it, instead of a paragraph to read per chunk.
+Approve, ask questions, flag concerns, or ask for a fix before moving to
+the next chunk. A summary wraps up the review at the end.
 
 See [`skills/reviewing-ai-diffs/SKILL.md`](skills/reviewing-ai-diffs/SKILL.md)
 for the full process, and
