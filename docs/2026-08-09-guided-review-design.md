@@ -5,6 +5,20 @@ Date: 2026-08-09
 _Note: shipped as the `reviewing-ai-diffs` skill — "guided-review" below was
 the working name during design._
 
+_Note: the "Per-chunk review loop" and "Presentation format" sections below
+describe the original per-chunk chat Q&A (approve/ask/flag/fix-now,
+prose template, opt-in Artifact). User feedback after shipping was that
+this still didn't reduce review mental load — each chunk's prose was read
+at uniform depth regardless of risk, doubts were hedged questions the
+reviewer still had to go verify, and the interactive gating added its own
+overhead. The skill was redesigned around a single compiled Artifact
+instead: chunks are checked in parallel, compiled once into a report (one
+diagram per chunk, sized to the smallest shape that fits the change,
+doubts marked in place), and published — no per-chunk approval loop, no
+wrap-up. See `skills/reviewing-ai-diffs/SKILL.md` for the current
+behavior; this document is kept as the original rationale, not an
+up-to-date spec._
+
 ## Problem
 
 Reviewing AI-generated code is harder than reviewing human-written code, even

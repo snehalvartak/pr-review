@@ -5,9 +5,9 @@ A Claude Code skill for reviewing AI-generated diffs without drowning in them.
 AI-written code lacks the "why" a human author carries in their head, and
 large diffs make that worse — too many files/lines to hold in context at
 once, and it's specifically hard to catch code that *looks* right but is
-subtly wrong. This skill walks a diff one logical chunk at a time, each
-independently pre-screened by a subagent before you see it, so you never
-face the whole diff at once.
+subtly wrong. This skill splits a diff into intent chunks, has each
+independently pre-screened by a subagent, and compiles the result into a
+single visual report so you never face the whole diff as flat text.
 
 ## Install
 
@@ -26,17 +26,20 @@ Ask Claude to review a diff, or invoke the skill directly:
 - Default: reviews your working tree diff against `HEAD` (staged + unstaged).
 - `/reviewing-ai-diffs branch` — reviews the current branch against its base.
 - `/reviewing-ai-diffs <commit-range or description>` — a custom scope.
+- `/reviewing-ai-diffs risk-first` — compiles chunks riskiest-first instead
+  of the intent-order default (combinable with the above).
 
-Before the first chunk you're asked how to order chunks and whether you
-want a live companion Artifact — a page that shows the diff itself,
-GitHub-PR-style, alongside each chunk's explanation, updated as you go
-rather than only handed to you at the end. Each chunk is shown as a risk
-tag plus one small diagram sized to the shape of the change — a sequence
-diagram, a call tree, a file tree, a component tree, or a code excerpt,
-whichever is smallest and fits — with an independent subagent's doubts (if
-any) marked directly on it, instead of a paragraph to read per chunk.
-Approve, ask questions, flag concerns, or ask for a fix before moving to
-the next chunk. A summary wraps up the review at the end.
+No questions to answer up front. The skill chunks the diff by intent,
+checks every chunk independently and in parallel, and compiles the result
+into a single Artifact: an overview strip of every chunk's name, risk tag,
+and doubt count, followed by each chunk's real diff hunk next to one small
+diagram sized to the shape of the change — a sequence diagram, a call
+tree, a file tree, a component tree, or a code excerpt, whichever is
+smallest and fits — with any doubts an independent subagent raised marked
+directly on it. Chat gets one line with the link and a doubt count; the
+artifact is the report, and it's the only output — this skill doesn't ask
+you to approve or fix anything as it goes, it just hands you something to
+read.
 
 See [`skills/reviewing-ai-diffs/SKILL.md`](skills/reviewing-ai-diffs/SKILL.md)
 for the full process, and
