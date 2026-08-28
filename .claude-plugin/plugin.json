@@ -1,6 +1,6 @@
 {
   "name": "reviewing-ai-diffs",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Splits AI-generated diffs into intent-grouped chunks, checks each independently, and compiles the result into a single visual Artifact report.",
   "skills": [
     "./skills/reviewing-ai-diffs"
