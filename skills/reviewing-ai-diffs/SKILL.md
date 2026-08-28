@@ -52,9 +52,22 @@ one look defeats the point.
 
 Intent source, in priority order:
 1. A plan/spec doc for the work, a linked issue, or recent commit messages
-   — use as ground truth for what each chunk is for.
+   — use to label and group the chunks. Treat this as the author's claimed
+   intent, not verified fact, even as the top-priority source: it can be
+   the same AI's own narrative about the diff under review. Check it
+   against the diff itself — if a chunk's actual changes go beyond what the
+   source describes, chunk by what the diff does, not by what the source
+   claims, and carry the gap into step 3 as a doubt.
 2. Otherwise, infer intent from the diff itself, and state the inferred
    intent explicitly in the chunk (see step 3) so it's clear it's a guess.
+
+Either way, the stated intent orients the reader — it never substitutes for
+the independent check in step 2, and a match between stated intent and
+actual behavior is never grounds on its own for treating a chunk as
+acceptable. Intent (this step), the diff, and the independent findings
+(step 2) are three separate things the compiled artifact (step 3) keeps
+visually distinct; the reader forms the acceptance decision after reading
+all three, not this skill.
 
 Tag each chunk with a risk category, e.g. `core-logic` / `data-mutation` /
 `auth` (high) vs. `boilerplate` / `formatting` / `tests` (low) — these are
@@ -73,7 +86,10 @@ at the callers). Give it nothing else: not the conversation history, not
 the stated intent, not why the code was written. This independence is the
 point — a subagent with no stake in the code being right, and no exposure
 to the narrative that justified it, catches what a same-context re-read
-misses.
+misses. Its answer to "what does this code appear to do" is reconstructed
+from the code and its callers alone, never inherited from the authoring
+agent's account of it — that's what makes the comparison against stated
+intent in step 3 a real check instead of the same story read back.
 
 Dispatch every chunk's check at once, in parallel — there's no chat pacing
 to hide latency behind, so there's no reason to serialize them. Chunks
@@ -103,8 +119,11 @@ Then, for each chunk, in that same order:
 
 - **Header**: name + risk tag.
 - **Why**, only if the intent isn't obvious from the header and diagram
-  alone, or if it's inferred rather than sourced — mark "(inferred)".
-  Skip it when the diagram already makes intent self-evident.
+  alone. State it as a claim, not a confirmed fact, whichever source it
+  came from — mark "(inferred)" when guessed from the diff, or "(as
+  stated)" when sourced from a plan/issue/commit message, so the reader
+  never mistakes either for something this skill has verified. Skip it
+  when the diagram already makes intent self-evident.
 - **One diagram** — never more than one — sized to the smallest shape that
   captures what actually changed:
 
@@ -154,6 +173,8 @@ on it is a separate step the reader takes on their own.
 | Mistake | Fix |
 |---|---|
 | Chunking by file instead of by intent | Group by what changed *together for a reason*, even across files |
+| Trusting a plan/spec/commit message's account of a chunk's scope over the diff itself | It can be the authoring AI's own narrative about its own diff — chunk by what the diff actually does, flag the gap as a doubt if the two disagree |
+| Letting a stated-intent-vs-behavior match read as "this chunk passed" | It's one data point for the reader, not a verdict — this skill never decides acceptability, only surfaces intent, diff, and independent findings side by side |
 | Skipping the independent subagent check to save time | It's the step that catches plausible-but-wrong code; the artifact's value collapses without it |
 | Dispatching chunk checks one at a time | Dispatch all of them in parallel — nothing paces them anymore |
 | Subagent's doubts stated as confirmed bugs | Mark as a doubt on the diagram, not a confirmed bug — the subagent can be wrong too |
