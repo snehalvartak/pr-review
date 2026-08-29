@@ -1,0 +1,23 @@
+diff --git a/src/fetch_client.py b/src/fetch_client.py
+index e79a062..f3fb3c8 100644
+--- a/src/fetch_client.py
++++ b/src/fetch_client.py
+@@ -1,7 +1,15 @@
+ import requests
+
++MAX_RETRIES = 3
++
+
+ def fetch(url, timeout=5):
+-    response = requests.get(url, timeout=timeout)
+-    response.raise_for_status()
+-    return response.json()
++    attempts = 0
++    while attempts < MAX_RETRIES:
++        try:
++            response = requests.get(url, timeout=timeout)
++            response.raise_for_status()
++            return response.json()
++        except requests.RequestException:
++            attempts += 1
++    return None

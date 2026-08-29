@@ -1,0 +1,4 @@
+Add simple retry on transient network errors for fetch()
+
+Retries the request a few times before giving up so a flaky connection
+doesn't fail the caller outright.
