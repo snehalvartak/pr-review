@@ -14,8 +14,7 @@ When filing a bug, include:
 - What you expected to happen vs. what actually happened.
 - The diff (or a minimal reproduction of it) that triggered the issue, if
   you can share it.
-- Whether a resumable state file was involved (see the "Scope" section of
-  [`skills/reviewing-ai-diffs/SKILL.md`](skills/reviewing-ai-diffs/SKILL.md)).
+- The generated report (link or HTML), if you can share it.
 
 For feature requests, describe the review scenario that's currently
 awkward or unsupported, and what outcome you'd want instead.
@@ -25,14 +24,15 @@ awkward or unsupported, and what outcome you'd want instead.
 1. Fork the repo and create a branch off `main`.
 2. Make your change. The skill's behavior lives in
    [`skills/reviewing-ai-diffs/SKILL.md`](skills/reviewing-ai-diffs/SKILL.md);
+   the report layout is `skills/reviewing-ai-diffs/template.html`, and
    the rationale behind its design is in
    [`docs/2026-08-09-guided-review-design.md`](docs/2026-08-09-guided-review-design.md).
 3. Test your change against the fixtures in [`tests/`](tests/README.md) —
    at minimum, run the skill against `tests/diff-with-bug/diff.patch` and
-   confirm it still separates the diff into the expected intent chunks and
-   surfaces both planted issues. Add a new fixture under `tests/` if your
-   change affects chunking, risk-tagging, or the independent-check step in
-   a way the existing fixture doesn't exercise.
+   confirm it meets the passing criteria in [`tests/README.md`](tests/README.md).
+   Add a new fixture under `tests/` if your change affects classification,
+   diagram rules, or the independent-check step in a way the existing
+   fixture doesn't exercise.
 4. Update `README.md` and/or `SKILL.md` if you changed user-facing behavior.
 5. Open a pull request describing what changed and why, and how you
    verified it (which fixtures, what output you saw).

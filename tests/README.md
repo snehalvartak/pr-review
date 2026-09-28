@@ -13,11 +13,15 @@ independent-check step actually catches plausible-but-wrong code:
    from 0-indexed to 1-indexed pages; existing 0-indexed callers silently
    shift a page, and `page=0` now yields a negative start.
 
-**Passing run:** invoke the skill against this diff (e.g. apply it to a
-scratch repo, or hand the patch to a test agent). The skill passes if the
-compiled artifact has two separate intent chunk sections — not one blob,
-not per-file — and the independent checks surface both planted issues,
-marked directly on each chunk's diagram (capped at three ranked doubts
-each). Exact wording and diagram choice will vary between runs; the two
-issues being caught, and visibly anchored to the code that causes them, is
-the bar.
+**Passing run:** invoke the skill against this diff. It passes if:
+
+- `fetch` gets a delta flowchart showing the new loop and `return None`
+  as added, and the old raise-to-caller exit as removed.
+- `page_bounds` is a Value row (`page * page_size` → `(page - 1) * page_size`),
+  not a flowchart.
+- Both planted issues appear as ⚠ doubts anchored to the right line.
+- The page has no prose paragraphs; chat gets only the link and a count.
+
+[`example-report.html`](diff-with-bug/example-report.html) is a reference
+render. Wording and layout will vary between runs; the structure and the
+two caught issues are the bar.

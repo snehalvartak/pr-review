@@ -1,0 +1,137 @@
+<title>diff-with-bug flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+  :root {
+    --bg: #f7f8fa; --panel: #ffffff; --ink: #1c2128; --mute: #636c76; --line: #d8dee4;
+    --add: #1a7f37; --add-bg: #dafbe1; --del: #cf222e; --del-bg: #ffebe9;
+    --mod: #9a6700; --mod-bg: #fff8c5; --warn: #bc4c00; --warn-bg: #fff1e5;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0f1216; --panel: #161b22; --ink: #e6edf3; --mute: #8d96a0; --line: #30363d;
+      --add: #3fb950; --add-bg: #12261a; --del: #f85149; --del-bg: #2d1416;
+      --mod: #d29922; --mod-bg: #2b2111; --warn: #f0883e; --warn-bg: #2d1c10;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f1216; --panel: #161b22; --ink: #e6edf3; --mute: #8d96a0; --line: #30363d;
+    --add: #3fb950; --add-bg: #12261a; --del: #f85149; --del-bg: #2d1416;
+    --mod: #d29922; --mod-bg: #2b2111; --warn: #f0883e; --warn-bg: #2d1c10;
+  }
+  body { background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); padding: 20px 16px 48px; }
+  main { max-width: 1100px; margin: 0 auto; display: grid; gap: 20px; }
+  code, .loc, .mono { font-family: var(--mono); font-size: 12.5px; }
+  h1 { font: 600 18px/1.3 var(--mono); margin: 0; text-wrap: balance; overflow-wrap: anywhere; }
+  h2 { font: 600 14px/1.3 var(--sans); margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+  h2 code { font-size: 14px; }
+  .loc { color: var(--mute); }
+  .meta { color: var(--mute); font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .top { display: grid; gap: 10px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--mute); align-items: center; }
+  .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 2px solid; vertical-align: -2px; margin-right: 4px; }
+  .sw.add { background: var(--add-bg); border-color: var(--add); }
+  .sw.del { background: var(--del-bg); border-color: var(--del); border-style: dashed; }
+  .sw.mod { background: var(--mod-bg); border-color: var(--mod); }
+  .sw.same { background: transparent; border-color: var(--mute); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font: 12.5px var(--mono); color: var(--ink); text-decoration: none; padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); }
+  .chip:hover, .chip:focus-visible { border-color: var(--mute); outline: none; }
+  .chip .w, .warnc { color: var(--warn); font-weight: 600; }
+  .chip.clean { color: var(--mute); }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 12px; scroll-margin-top: 12px; }
+  section.hot { border-left: 3px solid var(--warn); }
+  .graph { overflow-x: auto; }
+  .graph svg { max-width: min(100%, 760px) !important; height: auto; }
+  .graph pre.mermaid { margin: 0; background: none; font-size: 13px; }
+  .doubts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .doubts li { display: grid; grid-template-columns: 2.4em 4.5em 1fr; gap: 10px; align-items: baseline; padding: 4px 8px; border-radius: 4px; background: var(--warn-bg); }
+  .doubts b { color: var(--warn); font-family: var(--mono); font-size: 12.5px; }
+  .clean-note { color: var(--mute); font-size: 12.5px; margin: 0; }
+  .tbl { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  td, th { text-align: left; padding: 6px 10px 6px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 600; color: var(--mute); font-size: 12px; border-top: none; }
+  .was { color: var(--del); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--del) 50%, transparent); }
+  .now { color: var(--add); }
+  .files { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; font: 12.5px var(--mono); color: var(--mute); }
+  .files .a { color: var(--add); } .files .d { color: var(--del); }
+</style>
+
+<main>
+  <div class="top">
+    <h1>tests/diff-with-bug vs base</h1>
+    <div class="meta">2 files · <span style="color:var(--add)">+12</span> <span style="color:var(--del)">−4</span> · 1 flow changed · <span class="warnc">⚠ 4</span></div>
+    <div class="legend">
+      <span><i class="sw add"></i>added</span>
+      <span><i class="sw del"></i>removed</span>
+      <span><i class="sw mod"></i>changed</span>
+      <span><i class="sw same"></i>unchanged</span>
+      <span><code>══▶</code> new edge</span>
+      <span><code>┄┄✕</code> removed edge</span>
+      <span class="warnc">⚠n doubt</span>
+    </div>
+    <nav class="chips">
+      <a class="chip" href="#f-fetch">fetch <span class="w">⚠3</span></a>
+      <a class="chip" href="#f-page_bounds">page_bounds <span class="w">⚠1</span></a>
+    </nav>
+  </div>
+
+  <section id="f-fetch" class="hot">
+    <h2><code>fetch</code> <span class="loc">src/fetch_client.py:6</span> <span class="warnc">⚠ 3</span></h2>
+    <div class="graph"><pre class="mermaid">
+flowchart TD
+  classDef default fill:#8b949e14,stroke:#8b949e
+  classDef add fill:#2ea04326,stroke:#2ea043,stroke-width:2px
+  classDef del fill:#f8514914,stroke:#f85149,stroke-dasharray:5 4
+  classDef mod fill:#d2992233,stroke:#d29922,stroke-width:2px
+  S(["fetch(url)"]) ==> L{"attempts &lt; 3 ⚠3"}:::add
+  L ==>|yes| G["requests.get · L10"]
+  G --> R["raise_for_status · L11"]
+  R --> J(["return json · L12"])
+  R -.-x X(["raise to caller"]):::del
+  G -.-x X
+  R ==>|RequestException| E["except: attempts += 1 · L13 ⚠1"]:::add
+  G ==>|RequestException| E
+  E ==> L
+  L ==>|no| N(["return None · L15 ⚠2"]):::add
+    </pre></div>
+    <ol class="doubts">
+      <li><b>⚠1</b><span class="loc">L13</span><span>HTTPError is a RequestException: 4xx gets retried</span></li>
+      <li><b>⚠2</b><span class="loc">L15</span><span>Used to raise; callers now receive None</span></li>
+      <li><b>⚠3</b><span class="loc">L8</span><span>Retries immediately, no backoff</span></li>
+    </ol>
+  </section>
+
+  <section id="values">
+    <h2>Value changes</h2>
+    <div class="tbl"><table>
+      <tr><th>where</th><th>before → after</th><th></th></tr>
+      <tr id="f-page_bounds">
+        <td><code>page_bounds</code><br><span class="loc">src/paginate.py:2</span></td>
+        <td><code class="was">start = page * page_size</code><br><code class="now">start = (page - 1) * page_size</code></td>
+        <td><span class="warnc">⚠</span> 0-indexed callers shift one page; page=0 → negative start</td>
+      </tr>
+    </table></div>
+  </section>
+</main>
+
+<script>
+  // Artifacts render <pre class="mermaid"> natively. When opened as a plain
+  // local file, fall back to loading Mermaid once.
+  window.addEventListener("load", () => setTimeout(() => {
+    if (document.querySelector(".mermaid svg") || !document.querySelector("pre.mermaid")) return;
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js";
+    s.onload = () => {
+      const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+      mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "default" });
+      mermaid.run({ querySelector: "pre.mermaid" });
+    };
+    document.head.appendChild(s);
+  }, 800));
+</script>

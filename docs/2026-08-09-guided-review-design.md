@@ -5,6 +5,14 @@ Date: 2026-08-09
 _Note: shipped as the `reviewing-ai-diffs` skill — "guided-review" below was
 the working name during design._
 
+_Note (v0.4): the report was redesigned again around control flow. Reviewers
+said the per-chunk explanations were still too much to read — they can see
+the diff in git and wanted to see how the paths through the code changed.
+Intent chunks, risk tags, "why" lines and inline diff hunks were dropped;
+each changed function is now drawn as one merged before/after flowchart,
+expression-only changes collapse to a before → after row, and doubts are
+≤10-word markers pinned to graph nodes._
+
 _Note: the "Per-chunk review loop" and "Presentation format" sections below
 describe the original per-chunk chat Q&A (approve/ask/flag/fix-now,
 prose template, opt-in Artifact). User feedback after shipping was that

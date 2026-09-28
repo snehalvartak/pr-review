@@ -1,13 +1,16 @@
 # reviewing-ai-diffs
 
-A Claude Code skill for reviewing AI-generated diffs without drowning in them.
+A Claude Code skill that turns an AI-generated diff into control-flow
+pictures, not more text to read.
 
-AI-written code lacks the "why" a human author carries in their head, and
-large diffs make that worse — too many files/lines to hold in context at
-once, and it's specifically hard to catch code that *looks* right but is
-subtly wrong. This skill splits a diff into intent chunks, has each
-independently pre-screened by a subagent, and compiles the result into a
-single visual report so you never face the whole diff as flat text.
+You can already see the diff in git. What's hard to see is how the *paths*
+through the code changed: a new retry loop, an error that used to propagate
+and is now swallowed, a caller that can suddenly get `None`. This skill
+draws each changed function as one merged before/after flowchart
+(added = green, removed = dashed red, changed = amber), pins independently
+found doubts to the nodes that cause them, and keeps prose to a minimum.
+
+![example](tests/diff-with-bug/example-report.png)
 
 ## Install
 
@@ -23,23 +26,25 @@ Ask Claude to review a diff, or invoke the skill directly:
 /reviewing-ai-diffs
 ```
 
-- Default: reviews your working tree diff against `HEAD` (staged + unstaged).
-- `/reviewing-ai-diffs branch` — reviews the current branch against its base.
-- `/reviewing-ai-diffs <commit-range or description>` — a custom scope.
-- `/reviewing-ai-diffs risk-first` — compiles chunks riskiest-first instead
-  of the intent-order default (combinable with the above).
+- Default: working tree vs `HEAD` (staged + unstaged).
+- `/reviewing-ai-diffs branch` — current branch vs its base.
+- `/reviewing-ai-diffs <commit-range>` — a custom range.
 
-No questions to answer up front. The skill chunks the diff by intent,
-checks every chunk independently and in parallel, and compiles the result
-into a single Artifact: an overview strip of every chunk's name, risk tag,
-and doubt count, followed by each chunk's real diff hunk next to one small
-diagram sized to the shape of the change — a sequence diagram, a call
-tree, a file tree, a component tree, or a code excerpt, whichever is
-smallest and fits — with any doubts an independent subagent raised marked
-directly on it. Chat gets one line with the link and a doubt count; the
-artifact is the report, and it's the only output — this skill doesn't ask
-you to approve or fix anything as it goes, it just hands you something to
-read.
+Output is a single page:
+
+- **Flow** — a delta flowchart per function whose branches, loops,
+  returns, raises, or calls changed. Every node carries its line number.
+- **Calls** — changed functions and their callers, with broken contracts
+  marked on the edge.
+- **Value changes** — one `old → new` row per function whose flow is the
+  same but an expression, constant, or signature changed.
+- **No flow change** — one line per remaining file.
+- **⚠ doubts** — from a subagent that sees only before/after source and
+  call sites (not the intent), ≤3 per function, ≤10 words each.
+
+Chat gets the link and one count line. See
+[`tests/diff-with-bug/example-report.html`](tests/diff-with-bug/example-report.html)
+for the output on the test fixture.
 
 See [`skills/reviewing-ai-diffs/SKILL.md`](skills/reviewing-ai-diffs/SKILL.md)
 for the full process, and
