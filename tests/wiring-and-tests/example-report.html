@@ -60,6 +60,8 @@
   .now { color: var(--add); }
   .files { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; font: 12.5px var(--mono); color: var(--mute); }
   .was-n { color: var(--del); }
+  .keys { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .retyped { color: var(--mod); }
   .files .a { color: var(--add); } .files .d { color: var(--del); }
 </style>
 
@@ -88,14 +90,26 @@
     <div class="graph"><pre class="mermaid">
 flowchart LR
   classDef default fill:#8b949e14,stroke:#8b949e
+  classDef lane fill:#8b949e0a,stroke:#8b949e88,stroke-dasharray:3 3
   classDef add fill:#2ea04326,stroke:#2ea043,stroke-width:2px
   classDef del fill:#f8514914,stroke:#f85149,stroke-dasharray:5 4
   classDef mod fill:#d2992233,stroke:#d29922,stroke-width:2px
-  R(["GET /admin/export"]) -.-x M(["@require_admin"]):::del
-  M -.-x E["export_users · app.py:10"]
+  subgraph app["app.py"]
+    R(["GET /admin/export"])
+    M(["@require_admin"]):::del
+    E["export_users · L10"]
+    H(["GET /health"]):::add
+    HH["health · L15"]:::add
+  end
+  subgraph exp["export.py"]
+    T["to_csv · L5"]
+  end
+  class app,exp lane
+  R -.-x M
+  M -.-x E
   R ==>|"⚠1"| E
-  E --> T["to_csv · export.py:5"]
-  H(["GET /health"]):::add ==> HH["health · app.py:15"]:::add
+  E --> T
+  H ==> HH
     </pre></div>
     <ol class="doubts">
       <li><b>⚠1</b><span class="loc">app.py:9</span><span>Admin check removed: any caller can export all users</span></li>

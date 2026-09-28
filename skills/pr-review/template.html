@@ -65,6 +65,8 @@
   .now { color: var(--add); }
   .files { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; font: 12.5px var(--mono); color: var(--mute); }
   .was-n { color: var(--del); }
+  .keys { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .retyped { color: var(--mod); }
   .files .a { color: var(--add); } .files .d { color: var(--del); }
 </style>
 
@@ -88,12 +90,14 @@
   </div>
 
   <!-- CALLS: omit if no changed function has callers and no Wiring changed.
-       Wiring entry points are stadium nodes: R(["GET /orders"]):::add -->
+       Wiring entry points are stadium nodes: R(["GET /orders"]):::add
+       Nodes from 2+ modules: one lane each, subgraph api["src/api"] … end, then class api,web lane -->
   <section id="calls">
     <h2>Calls</h2>
     <div class="graph"><pre class="mermaid">
 flowchart LR
   classDef default fill:#8b949e14,stroke:#8b949e
+  classDef lane fill:#8b949e0a,stroke:#8b949e88,stroke-dasharray:3 3
   classDef add fill:#2ea04326,stroke:#2ea043,stroke-width:2px
   classDef del fill:#f8514914,stroke:#f85149,stroke-dasharray:5 4
   classDef mod fill:#d2992233,stroke:#d29922,stroke-width:2px
@@ -129,6 +133,19 @@ sequenceDiagram
     <ol class="doubts">
       <li><b>⚠1</b><span class="loc">L{{n}}</span><span>{{≤10 words}}</span></li>
     </ol>
+  </section>
+
+  <!-- SHAPE: omit if none. Fields gained/lost/renamed/retyped in a returned object, payload, schema, or type -->
+  <section id="shapes">
+    <h2>Shape changes</h2>
+    <div class="tbl"><table>
+      <tr><th>where</th><th>keys</th><th></th></tr>
+      <tr id="s-{{ID}}">
+        <td><code>{{fn / endpoint / type}}</code><br><span class="loc">{{path}}:{{line}}</span></td>
+        <td><div class="keys"><code class="now">+{{new_key}}</code> <code class="was">−{{old_key}}</code> <code class="retyped">~{{key}}: {{old}}→{{new}}</code></div></td>
+        <td><span class="warnc">⚠</span> {{≤10 words, or empty}}</td>
+      </tr>
+    </table></div>
   </section>
 
   <!-- MORE FLOWS: omit unless more than 8 Flow/Interaction items -->

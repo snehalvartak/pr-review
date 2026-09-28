@@ -39,10 +39,21 @@ awkward or unsupported, and what outcome you'd want instead.
 
 ## Development notes
 
-This repo is a [Claude Code plugin](https://code.claude.com/docs) —
-`.claude-plugin/plugin.json` registers the skill under `skills/`. There's
-no build step; changes to `SKILL.md` take effect the next time the skill
-is invoked.
+The skill is a plain [Agent Skill](https://agentskills.io):
+`skills/pr-review/SKILL.md` plus `template.html`, with no build step.
+Three thin manifests make it installable:
 
-To try the skill locally without publishing, add this repo's path directly
-via `claude plugin marketplace add <local-path>` instead of the GitHub URL.
+- `.claude-plugin/plugin.json` and `marketplace.json`: Claude Code
+- `package.json` (`pi.skills`): pi
+- nothing extra for Cursor/OpenCode; the `skills` CLI and both agents read
+  `skills/pr-review/` directly
+
+Keep `SKILL.md` agent-neutral: name tools by capability ("subagent",
+"artifact tool") with a fallback, never assume one agent's tool exists.
+
+To try changes locally:
+
+- Claude Code: `claude plugin validate .` then
+  `claude plugin marketplace add ./` and `claude plugin install pr-review@pr-review`
+- Cursor/OpenCode/pi: `npx skills add ./ -a cursor -a opencode -a pi`
+  from a scratch project

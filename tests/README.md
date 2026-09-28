@@ -42,6 +42,7 @@ Covers the non-function cases:
 - The Calls graph shows the route → `@require_admin` → handler path as
   removed and a direct route → handler edge as new, with a ⚠ doubt about
   the lost auth. `GET /health` shows as added.
+- `app.py` and `export.py` nodes sit in separate lanes.
 - The weakened assertion appears as a Tests row with a ⚠ doubt.
 - The move is one `(moved)` line, not a delete plus an add.
 - The lockfile is counted as excluded, not charted.
