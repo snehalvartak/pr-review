@@ -1,10 +1,10 @@
 # Contributing
 
-Thanks for considering a contribution to `reviewing-ai-diffs`.
+Thanks for considering a contribution to `pr-review`.
 
 ## Reporting issues
 
-Before opening an issue, search [existing issues](https://github.com/snehalvartak/reviewing-ai-diffs/issues)
+Before opening an issue, search [existing issues](https://github.com/snehalvartak/pr-review/issues)
 to see if it's already been reported.
 
 When filing a bug, include:
@@ -23,8 +23,8 @@ awkward or unsupported, and what outcome you'd want instead.
 
 1. Fork the repo and create a branch off `main`.
 2. Make your change. The skill's behavior lives in
-   [`skills/reviewing-ai-diffs/SKILL.md`](skills/reviewing-ai-diffs/SKILL.md);
-   the report layout is `skills/reviewing-ai-diffs/template.html`, and
+   [`skills/pr-review/SKILL.md`](skills/pr-review/SKILL.md);
+   the report layout is `skills/pr-review/template.html`, and
    the rationale behind its design is in
    [`docs/2026-08-09-guided-review-design.md`](docs/2026-08-09-guided-review-design.md).
 3. Test your change against the fixtures in [`tests/`](tests/README.md) —

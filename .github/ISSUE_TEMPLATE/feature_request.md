@@ -18,5 +18,5 @@ What you'd want to happen instead.
 
 **Additional context**
 Any related fixtures, example diffs, or links to relevant sections of
-`skills/reviewing-ai-diffs/SKILL.md` or
+`skills/pr-review/SKILL.md` or
 `docs/2026-08-09-guided-review-design.md`.

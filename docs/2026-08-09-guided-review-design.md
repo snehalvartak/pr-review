@@ -2,7 +2,7 @@
 
 Date: 2026-08-09
 
-_Note: shipped as the `reviewing-ai-diffs` skill — "guided-review" below was
+_Note: shipped as the `reviewing-ai-diffs` skill (renamed `pr-review` in v0.5) — "guided-review" below was
 the working name during design._
 
 _Note (v0.4): the report was redesigned again around control flow. Reviewers
@@ -23,7 +23,7 @@ overhead. The skill was redesigned around a single compiled Artifact
 instead: chunks are checked in parallel, compiled once into a report (one
 diagram per chunk, sized to the smallest shape that fits the change,
 doubts marked in place), and published — no per-chunk approval loop, no
-wrap-up. See `skills/reviewing-ai-diffs/SKILL.md` for the current
+wrap-up. See `skills/pr-review/SKILL.md` for the current
 behavior; this document is kept as the original rationale, not an
 up-to-date spec._
 
