@@ -1,9 +1,9 @@
 ---
-name: reviewing-ai-diffs
+name: pr-review
 description: Use when reviewing AI-generated code changes (a diff, working tree changes, or a branch) and the reviewer needs to see quickly how control flow changed — new branches, loops, early returns, removed error paths, changed call contracts, rewired routes or handlers, weakened tests — rather than read an explanation of the diff.
 ---
 
-# Reviewing AI Diffs
+# PR Review
 
 ## Overview
 

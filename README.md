@@ -1,4 +1,4 @@
-# reviewing-ai-diffs
+# pr-review
 
 A Claude Code skill that turns an AI-generated diff into control-flow
 pictures, not more text to read.
@@ -15,7 +15,7 @@ found doubts to the nodes that cause them, and keeps prose to a minimum.
 ## Install
 
 ```
-claude plugin marketplace add snehalvartak/reviewing-ai-diffs
+claude plugin marketplace add snehalvartak/pr-review
 ```
 
 ## Use
@@ -23,12 +23,12 @@ claude plugin marketplace add snehalvartak/reviewing-ai-diffs
 Ask Claude to review a diff, or invoke the skill directly:
 
 ```
-/reviewing-ai-diffs
+/pr-review
 ```
 
 - Default: working tree vs `HEAD` (staged + unstaged).
-- `/reviewing-ai-diffs branch` — current branch vs its base.
-- `/reviewing-ai-diffs <commit-range>` — a custom range.
+- `/pr-review branch` — current branch vs its base.
+- `/pr-review <commit-range>` — a custom range.
 
 Output is a single page:
 
@@ -54,7 +54,7 @@ Chat gets the link and one count line. Reference renders:
 [`diff-with-bug`](tests/diff-with-bug/example-report.html),
 [`wiring-and-tests`](tests/wiring-and-tests/example-report.html).
 
-See [`skills/reviewing-ai-diffs/SKILL.md`](skills/reviewing-ai-diffs/SKILL.md)
+See [`skills/pr-review/SKILL.md`](skills/pr-review/SKILL.md)
 for the full process, and
 [`docs/2026-08-09-guided-review-design.md`](docs/2026-08-09-guided-review-design.md)
 for the design rationale.

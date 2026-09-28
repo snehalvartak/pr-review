@@ -6,7 +6,7 @@ labels: bug
 ---
 
 **Scope invoked**
-e.g. default working-tree diff, `reviewing-ai-diffs branch`, or a custom
+e.g. default working-tree diff, `pr-review branch`, or a custom
 commit-range/description.
 
 **Expected behavior**
@@ -21,7 +21,7 @@ triggered the issue.
 
 **Resumable state involved?**
 Was an interrupted-review state file picked up or expected to be picked
-up? (See the "Scope" section of `skills/reviewing-ai-diffs/SKILL.md`.)
+up? (See the "Scope" section of `skills/pr-review/SKILL.md`.)
 
 **Environment**
 - Claude Code version:
