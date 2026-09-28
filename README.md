@@ -32,19 +32,27 @@ Ask Claude to review a diff, or invoke the skill directly:
 
 Output is a single page:
 
-- **Flow** — a delta flowchart per function whose branches, loops,
+- **Flow**: a delta flowchart per function whose branches, loops,
   returns, raises, or calls changed. Every node carries its line number.
-- **Calls** — changed functions and their callers, with broken contracts
-  marked on the edge.
-- **Value changes** — one `old → new` row per function whose flow is the
+- **Interaction**: a delta sequence diagram when the change crosses a
+  component boundary (client ↔ handler, producer ↔ consumer) or depends
+  on ordering.
+- **Calls**: changed functions, their callers, and wiring (routes,
+  middleware, flags, DI), with broken contracts and removed registrations
+  marked.
+- **Value changes**: one `old → new` row per function whose flow is the
   same but an expression, constant, or signature changed.
-- **No flow change** — one line per remaining file.
-- **⚠ doubts** — from a subagent that sees only before/after source and
-  call sites (not the intent), ≤3 per function, ≤10 words each.
+- **Tests**: one row per weakened assertion, skip, or changed expectation.
+- **No flow change**: one line per remaining file; moved code shows once
+  as `(moved)`. Lockfiles and generated files are excluded and counted.
+- **⚠ doubts**: from a subagent that sees only before/after source and
+  call sites (not the intent), ≤3 per item, ≤10 words each.
 
-Chat gets the link and one count line. See
-[`tests/diff-with-bug/example-report.html`](tests/diff-with-bug/example-report.html)
-for the output on the test fixture.
+Large diffs get full diagrams for the 8 riskiest items; the rest are rows.
+
+Chat gets the link and one count line. Reference renders:
+[`diff-with-bug`](tests/diff-with-bug/example-report.html),
+[`wiring-and-tests`](tests/wiring-and-tests/example-report.html).
 
 See [`skills/reviewing-ai-diffs/SKILL.md`](skills/reviewing-ai-diffs/SKILL.md)
 for the full process, and

@@ -1,9 +1,4 @@
-<title>{{SHORT_NAME}} flow</title>
-<!--
-  Flow-delta report template. Fill every {{…}} and repeat the marked blocks.
-  Delete any section that would be empty (no callers, no value changes, etc.).
-  Mermaid text inside <pre class="mermaid"> must HTML-escape < > & in labels.
--->
+<title>wiring-and-tests flow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
 <style>
@@ -70,8 +65,8 @@
 
 <main>
   <div class="top">
-    <h1>{{SCOPE — e.g. feature/retry vs main}}</h1>
-    <div class="meta">{{N}} files · <span style="color:var(--add)">+{{ADD}}</span> <span style="color:var(--del)">−{{DEL}}</span> · {{F}} flows changed · <span class="warnc">⚠ {{W}}</span> · {{X}} excluded (lock/generated)</div>
+    <h1>tests/wiring-and-tests vs base</h1>
+    <div class="meta">4 files · <span style="color:var(--add)">+9</span> <span style="color:var(--del)">−5</span> · 2 routes rewired · 1 test weakened · <span class="warnc">⚠ 2</span> · 1 excluded (lock/generated)</div>
     <div class="legend">
       <span><i class="sw add"></i>added</span>
       <span><i class="sw del"></i>removed</span>
@@ -82,99 +77,47 @@
       <span class="warnc">⚠n doubt</span>
     </div>
     <nav class="chips">
-      <!-- one chip per flow section, same order as sections; class "clean" when ⚠ 0 -->
-      <a class="chip" href="#f-{{ID}}">{{fn}} <span class="w">⚠{{n}}</span></a>
+      <a class="chip" href="#calls">GET /admin/export <span class="w">⚠1</span></a>
+      <a class="chip" href="#t-requires_admin">test_export_requires_admin <span class="w">⚠1</span></a>
+      <a class="chip clean" href="#calls">GET /health</a>
     </nav>
   </div>
 
-  <!-- CALLS: omit if no changed function has callers and no Wiring changed.
-       Wiring entry points are stadium nodes: R(["GET /orders"]):::add -->
-  <section id="calls">
-    <h2>Calls</h2>
+  <section id="calls" class="hot">
+    <h2>Calls <span class="warnc">⚠ 1</span></h2>
     <div class="graph"><pre class="mermaid">
 flowchart LR
   classDef default fill:#8b949e14,stroke:#8b949e
   classDef add fill:#2ea04326,stroke:#2ea043,stroke-width:2px
   classDef del fill:#f8514914,stroke:#f85149,stroke-dasharray:5 4
   classDef mod fill:#d2992233,stroke:#d29922,stroke-width:2px
-  {{CALL GRAPH}}
-    </pre></div>
-  </section>
-
-  <!-- FLOW: repeat per function whose control flow changed; add class "hot" when ⚠ > 0 -->
-  <section id="f-{{ID}}" class="hot">
-    <h2><code>{{fn}}</code> <span class="loc">{{path}}:{{line}}</span> <span class="warnc">⚠ {{n}}</span></h2>
-    <!-- if moved: add <span class="loc">moved from {{old path}}:{{line}}</span> to the h2 -->
-    <div class="graph"><pre class="mermaid">
-flowchart TD
-  classDef default fill:#8b949e14,stroke:#8b949e
-  classDef add fill:#2ea04326,stroke:#2ea043,stroke-width:2px
-  classDef del fill:#f8514914,stroke:#f85149,stroke-dasharray:5 4
-  classDef mod fill:#d2992233,stroke:#d29922,stroke-width:2px
-  {{DELTA FLOWCHART}}
+  R(["GET /admin/export"]) -.-x M(["@require_admin"]):::del
+  M -.-x E["export_users · app.py:10"]
+  R ==>|"⚠1"| E
+  E --> T["to_csv · export.py:5"]
+  H(["GET /health"]):::add ==> HH["health · app.py:15"]:::add
     </pre></div>
     <ol class="doubts">
-      <li><b>⚠1</b><span class="loc">L{{n}}</span><span>{{≤10 words}}</span></li>
-    </ol>
-    <!-- when no doubts, replace the list with: <p class="clean-note">Independent check: clean</p> -->
-  </section>
-
-  <!-- INTERACTION: repeat per cross-component / ordering-dependent change; same h2 + doubts as FLOW -->
-  <section id="f-{{ID}}" class="hot">
-    <h2><code>{{entry}}</code> <span class="loc">{{path}}:{{line}}</span> <span class="warnc">⚠ {{n}}</span></h2>
-    <div class="graph"><pre class="mermaid">
-sequenceDiagram
-  {{DELTA SEQUENCE — added: rect rgba(46,160,67,0.15) … end; removed: A--xB: ✗ label inside rect rgba(248,81,73,0.12) … end}}
-    </pre></div>
-    <ol class="doubts">
-      <li><b>⚠1</b><span class="loc">L{{n}}</span><span>{{≤10 words}}</span></li>
+      <li><b>⚠1</b><span class="loc">app.py:9</span><span>Admin check removed: any caller can export all users</span></li>
     </ol>
   </section>
 
-  <!-- MORE FLOWS: omit unless more than 8 Flow/Interaction items -->
-  <section id="more">
-    <h2>More flows</h2>
-    <div class="tbl"><table>
-      <tr><th>where</th><th>nodes</th><th></th></tr>
-      <tr id="f-{{ID}}">
-        <td><code>{{fn}}</code><br><span class="loc">{{path}}:{{line}}</span></td>
-        <td class="mono"><span class="now">+{{a}}</span> <span class="was-n">−{{d}}</span></td>
-        <td><span class="warnc">⚠</span> {{≤10 words, or empty}}</td>
-      </tr>
-    </table></div>
-  </section>
-
-  <!-- VALUES: omit if none. Functions whose flow is unchanged but an expression/constant/signature changed -->
-  <section id="values">
-    <h2>Value changes</h2>
-    <div class="tbl"><table>
-      <tr><th>where</th><th>before → after</th><th></th></tr>
-      <tr id="f-{{ID}}">
-        <td><code>{{fn}}</code><br><span class="loc">{{path}}:{{line}}</span></td>
-        <td><code class="was">{{old expr}}</code><br><code class="now">{{new expr}}</code></td>
-        <td><span class="warnc">⚠</span> {{≤10 words, or empty}}</td>
-      </tr>
-    </table></div>
-  </section>
-
-  <!-- TESTS: omit if none. Only changes that let a test pass where it previously couldn't -->
   <section id="tests">
     <h2>Tests</h2>
     <div class="tbl"><table>
       <tr><th>test</th><th>before → after</th><th></th></tr>
-      <tr id="t-{{ID}}">
-        <td><code>{{test name}}</code><br><span class="loc">{{path}}:{{line}}</span></td>
-        <td><code class="was">{{old assertion / "(active)"}}</code><br><code class="now">{{new assertion / "(deleted)" / "@skip"}}</code></td>
-        <td><span class="warnc">⚠</span> {{≤10 words, or empty}}</td>
+      <tr id="t-requires_admin">
+        <td><code>test_export_requires_admin</code><br><span class="loc">tests/test_export.py:3</span></td>
+        <td><code class="was">status_code == 403</code><br><code class="now">status_code in (200, 403)</code></td>
+        <td><span class="warnc">⚠</span> Now accepts 200; hides the missing admin check</td>
       </tr>
     </table></div>
   </section>
 
-  <!-- REST: omit if none. Moved-unchanged code: <span>a.py:fn → b.py:fn (moved)</span> -->
   <section id="rest">
     <h2>No flow change</h2>
     <p class="files">
-      <span>{{path}} <span class="a">+{{a}}</span> <span class="d">−{{d}}</span></span>
+      <span>utils/csv_tools.py:to_csv → export.py:to_csv (moved)</span>
     </p>
   </section>
 </main>

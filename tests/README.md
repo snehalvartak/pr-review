@@ -25,3 +25,26 @@ independent-check step actually catches plausible-but-wrong code:
 [`example-report.html`](diff-with-bug/example-report.html) is a reference
 render. Wording and layout will vary between runs; the structure and the
 two caught issues are the bar.
+
+## wiring-and-tests/diff.patch
+
+Covers the non-function cases:
+
+1. **`app.py`**: `@require_admin` removed from `GET /admin/export`
+   (wiring change: the export is now public), plus a new `GET /health` route.
+2. **`tests/test_export.py`**: `== 403` loosened to `in (200, 403)`,
+   which makes the test pass despite the missing admin check.
+3. **`utils/csv_tools.py` → `export.py`**: moved verbatim.
+4. **`requirements.lock`**: lockfile bump.
+
+**Passing run:**
+
+- The Calls graph shows the route → `@require_admin` → handler path as
+  removed and a direct route → handler edge as new, with a ⚠ doubt about
+  the lost auth. `GET /health` shows as added.
+- The weakened assertion appears as a Tests row with a ⚠ doubt.
+- The move is one `(moved)` line, not a delete plus an add.
+- The lockfile is counted as excluded, not charted.
+
+[`example-report.html`](wiring-and-tests/example-report.html) is a
+reference render.

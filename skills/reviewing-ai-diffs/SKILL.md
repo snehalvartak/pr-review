@@ -1,6 +1,6 @@
 ---
 name: reviewing-ai-diffs
-description: Use when reviewing AI-generated code changes (a diff, working tree changes, or a branch) and the reviewer needs to see quickly how control flow changed — new branches, loops, early returns, removed error paths, changed call contracts — rather than read an explanation of the diff.
+description: Use when reviewing AI-generated code changes (a diff, working tree changes, or a branch) and the reviewer needs to see quickly how control flow changed — new branches, loops, early returns, removed error paths, changed call contracts, rewired routes or handlers, weakened tests — rather than read an explanation of the diff.
 ---
 
 # Reviewing AI Diffs
@@ -10,7 +10,7 @@ description: Use when reviewing AI-generated code changes (a diff, working tree 
 The reviewer already has the diff. What they lack is the *shape* change:
 which paths through the code are new, which are gone, and where a caller's
 assumptions just broke. This skill renders that as one page of delta
-flowcharts — before and after merged into a single graph, color-coded —
+diagrams — before and after merged into a single graph, color-coded —
 with independently-found doubts pinned to the nodes that cause them.
 
 **Visuals, not prose.** No summaries, no "why", no restated diff hunks.
@@ -26,44 +26,79 @@ Empty diff → say so, stop.
 
 ## Process
 
-### 1. Classify every changed function
+### 1. Filter
 
-From `git diff`, list each changed function/method. For each, read its
-**full before and after source** (`git show <base>:<path>` and the working
-file) — never draw from the hunk alone. Put it in exactly one bucket:
+Drop from everything below, and count as "excluded" in the header:
+lockfiles, vendored deps, minified/bundled output, binaries, and generated
+files (a `generated`/`do not edit` header, `*.pb.*`, `*_gen.*`,
+snapshots, `dist/`/`build/`).
+
+### 2. Detect moves
+
+Run `git diff -M -C --color-moved=zebra` over the same scope. Code that
+was moved (renamed file, function relocated, helper extracted) is **one**
+change, not a delete plus an add:
+
+- Moved unchanged → a Rest line: `a.py:fn → b.py:fn (moved)`.
+- Moved and edited → classify it as below, diffing against the *old*
+  body; header gets `moved from a.py:10`.
+- Extracted helper → the parent's chart shows the call as a `mod` node
+  `helper() · L40`; the helper gets its own chart only if its body is
+  not a verbatim move.
+
+### 3. Classify every change
+
+For each changed function/method, read its **full before and after
+source** (`git show <base>:<path>` and the working file) — never draw from
+the hunk alone. Put each change in exactly one bucket:
 
 | Bucket | Test | Rendered as |
 |---|---|---|
 | **Flow** | Branches, loops, returns, raises/throws, try/catch, awaits, or calls added/removed/reordered | Delta flowchart |
-| **Value** | Same flow; an expression, constant, default arg, or signature changed | One table row: old → new |
-| **Rest** | Formatting, renames, comments, imports, tests, config, docs | One line: path +a −d |
+| **Interaction** | The changed flow crosses a component boundary (HTTP client ↔ handler, producer ↔ consumer, emit ↔ listener) or its correctness depends on ordering/concurrency (awaits, locks, parallel tasks, retries across a call) | Delta sequence diagram |
+| **Wiring** | Code outside functions that changes *what runs*: route/handler tables, middleware or decorator registration, DI bindings, feature flags, cron/queue subscriptions, exported entry points | Nodes and edges in the Calls graph |
+| **Value** | Same flow; an expression, constant, default arg, config value, or signature changed | One row: old → new |
+| **Tests** | Test files | Rows for weakened assertions only (see below) |
+| **Rest** | Formatting, renames, comments, imports, docs, pure moves | One line: path +a −d |
 
-New functions are **Flow** (all nodes `add`) unless they're straight-line.
-Deleted functions: one `del` node in the call graph, no flowchart.
+New functions are **Flow** (all nodes `add`) unless straight-line.
+Deleted functions: one `del` node in the Calls graph, no chart.
 
-### 2. Find callers
+**Tests** — list only changes that make a test able to pass where it
+previously couldn't. AI edits do this to get green:
+- assertion deleted, or made looser (`==` → `in`/`>=`, exact → `ANY`, `assertRaises` removed)
+- expected value changed (flag ⚠ if the new value merely matches the changed code)
+- test skipped, xfail'd, commented out, or its setup mocks out the code under test
+- `try/except` or `catch` wrapped around the call under test
 
-For every Flow/Value function whose return values, raised errors, params,
-or side effects changed, grep its call sites. These feed the call graph and
-the independent check.
+New tests and strengthened assertions → one Rest line for the file.
 
-### 3. Independent check — all functions in parallel
+### 4. Find callers
 
-One subagent per Flow/Value function (batch trivial ones), dispatched at
-once. Give it only: before source, after source, call sites. **Not** the
-conversation, the intent, or your flowchart — independence is the point.
+For every Flow/Interaction/Value function whose return values, raised
+errors, params, or side effects changed, grep its call sites. These feed
+the Calls graph and the independent check.
+
+### 5. Independent check — all at once, in parallel
+
+One subagent per Flow/Interaction/Value/Wiring item (batch trivial ones),
+plus one for all Tests rows. Give it only: before source, after source,
+call sites (for Tests: the old and new test plus the code under test).
+**Not** the conversation, the intent, or your diagram — independence is
+the point.
 
 Ask it to return doubts only, each as `L<line> | ≤10 words`, max 3, ranked
 by impact, or `clean`. Correctness only: edge cases, error paths,
-off-by-one, null/None, contract breaks at call sites, concurrency. No style.
+off-by-one, null/None, contract breaks at call sites, ordering/races,
+tests that no longer test anything. No style.
 
-### 4. Draw
+### 6. Draw
 
 Copy `template.html` (next to this file) and fill it in. Delete sections
 that would be empty.
 
-**Delta flowchart** (one per Flow function, `flowchart TD`): a single graph
-that is the *union* of before and after.
+**Delta flowchart** (Flow; `flowchart TD`): a single graph that is the
+*union* of before and after.
 
 | Element | Syntax |
 |---|---|
@@ -75,34 +110,51 @@ that is the *union* of before and after.
 | Branch condition | `A{"cond"}` — ≤3 words, diamonds grow fast |
 | Entry / exit | `A(["name(args)"])` / `A(["return x · L20"])` |
 
-Rules:
-- Every surviving node carries its after-file line number — this is how
-  the reader jumps to the diff, and how a wrong graph gets caught.
+**Delta sequence diagram** (Interaction; `sequenceDiagram`): participants
+are components (functions, services, queues), not lines of code.
+
+| Element | Syntax |
+|---|---|
+| Message unchanged | `A->>B: label · L12` |
+| Message added | wrap in `rect rgba(46,160,67,0.15)` … `end` |
+| Message removed | `A--xB: ✗ label` wrapped in `rect rgba(248,81,73,0.12)` … `end` |
+| Concurrency | `par` / `and` / `end` blocks; `loop`, `alt`, `opt` as needed |
+
+Rules for both:
+- Every surviving node/message carries its after-file line number — this
+  is how the reader jumps to the diff, and how a wrong graph gets caught.
 - Labels ≤5 words, code-ish (`raise_for_status`, `retry ≤3`), no sentences.
 - Show removed exits explicitly (`raise to caller`, `return 404`) — a
   vanished error path is the most-missed change in AI diffs.
-- ≤15 nodes. Collapse untouched stretches into one node: `["… 8 lines"]`.
-- Append `⚠n` to the label of the node each doubt anchors to; list the
-  doubt text under the graph.
+- ≤15 nodes/messages. Collapse untouched stretches: `["… 8 lines"]`.
+- Append `⚠n` to the label each doubt anchors to; list doubt text under
+  the diagram.
 - HTML-escape `<`, `>`, `&` inside labels.
 
-**Call graph** (`flowchart LR`, only if any changed function has callers):
-changed functions + direct callers. Color changed functions by bucket
-(`mod`, or `add`/`del`). Label a caller edge only when its contract
-changed: `C -->|"may get None ⚠"| F`.
+**Calls graph** (`flowchart LR`; include if any changed function has
+callers or any Wiring changed): changed functions, their direct callers,
+and Wiring entry points as stadium nodes (`R(["GET /orders"])`,
+`F(["flag new_checkout"])`, `M(["auth middleware"])`). Color by delta as
+above; a removed registration is a `del` node or `-.-x` edge. Label a
+caller edge only when its contract changed: `C -->|"may get None ⚠"| F`.
 
-**Order**: Flow sections by ⚠ count desc, then by node delta. Chips in the
-header follow the same order and include Value rows.
+**Large diffs**: full diagrams for at most **8** Flow/Interaction items —
+the top 8 by ⚠ count, then by node delta. The rest go in the "More flows"
+table as one row each (fn, file:line, nodes +a −d, ⚠ text). Every item
+still gets its independent check.
 
-### 5. Publish
+**Order**: diagram sections by ⚠ count desc, then node delta. Header chips
+follow the same order and include Value and Tests rows with ⚠.
+
+### 7. Publish
 
 Load `artifact-design` (required by the Artifact tool; the template already
 follows its contract). Publish via the `Artifact` tool with `icon: "flow"`.
 No Artifact tool available → write the file into the repo's scratch/temp
 dir and give the path.
 
-Chat reply: the link and one line — `N flows · M value changes · K ⚠`.
-Nothing else.
+Chat reply: the link and one line —
+`N flows · M value changes · T test rows · K ⚠`. Nothing else.
 
 ## Common Mistakes
 
@@ -113,7 +165,13 @@ Nothing else.
 | Flowchart for a one-expression change | That's a Value row |
 | Missing the removed error path | Draw the old exit as a `del` node with a `-.-x` edge |
 | Nodes without line numbers | Every surviving node gets `· L<n>` |
-| Adding a summary, "why", or diff excerpt | The reader has git; the page is graphs, rows, and ⚠ lines only |
+| Route/flag/middleware change filed under Rest | That's Wiring — it changes what runs; put it in the Calls graph |
+| Test edits filed under Rest | Weakened assertions, skips, and changed expectations get Tests rows |
+| Moved code shown as delete + add | Detect moves first; diff the moved body against its old self |
+| Flowchart for a client↔server or producer↔consumer change | Use a sequence diagram |
+| 30 full diagrams on one page | Top 8 drawn; the rest are "More flows" rows |
+| Charting lockfiles or generated code | Exclude; count them in the header |
+| Adding a summary, "why", or diff excerpt | The reader has git; the page is diagrams, rows, and ⚠ lines only |
 | Giving the subagent intent or your graph | Before/after source + callers only |
-| Doubts phrased as confirmed bugs, or >3 per function | ≤3, ranked, ≤10 words, stated as doubts |
+| Doubts phrased as confirmed bugs, or >3 per item | ≤3, ranked, ≤10 words, stated as doubts |
 | Narrating the report in chat | Link + one count line |
