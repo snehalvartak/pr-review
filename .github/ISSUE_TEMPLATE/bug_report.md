@@ -6,8 +6,7 @@ labels: bug
 ---
 
 **Scope invoked**
-e.g. default working-tree diff, `pr-review branch`, or a custom
-commit-range/description.
+e.g. default working-tree diff, `branch`, or a custom commit range.
 
 **Expected behavior**
 What you expected the skill to do.
@@ -19,10 +18,10 @@ What it actually did instead.
 If possible, attach or paste the diff (or a minimal version of it) that
 triggered the issue.
 
-**Resumable state involved?**
-Was an interrupted-review state file picked up or expected to be picked
-up? (See the "Scope" section of `skills/pr-review/SKILL.md`.)
+**Report**
+The generated report (Artifact link or `.git/pr-review/report.html`), if
+you can share it.
 
 **Environment**
-- Claude Code version:
+- Agent and version (Claude Code, Cursor, OpenCode, pi):
 - OS:

@@ -26,7 +26,7 @@ your agent reads: `.agents/skills/` works for Cursor, OpenCode, and pi.
 
 ## Use
 
-- Default: working tree vs `HEAD` (staged + unstaged).
+- Default: working tree vs `HEAD` (staged, unstaged, and untracked).
 - `branch` — current branch vs its base.
 - `<commit-range>` — a custom range.
 
@@ -39,9 +39,11 @@ To keep noisy paths out, and out of the token budget, add a
 `.prreviewignore` at the repo root, one glob per line:
 
 ```
-**/*.snap
 migrations/**
+/docs/api/
 ```
+
+Patterns are gitignore-style and anchored at the repo root.
 
 Output is a single page:
 
@@ -57,7 +59,8 @@ Output is a single page:
   same but an expression, constant, or signature changed.
 - **Shape changes**: a key diff (`+items −results ~total: int→str`) when a
   returned object, API payload, schema, or type changes fields.
-- **Tests**: one row per weakened assertion, skip, or changed expectation.
+- **Tests**: one row per weakened assertion, skip, or changed expectation
+  (regenerated snapshots included).
 - **No flow change**: one line per remaining file; moved code shows once
   as `(moved)`. Lockfiles and generated files are excluded and counted.
 - **⚠ doubts**: from a subagent that sees only before/after source and

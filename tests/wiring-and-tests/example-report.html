@@ -48,8 +48,9 @@
   .graph { overflow-x: auto; }
   .graph svg { max-width: min(100%, 760px) !important; height: auto; }
   .graph pre.mermaid { margin: 0; background: none; font-size: 13px; }
-  .doubts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-  .doubts li { display: grid; grid-template-columns: 2.4em 4.5em 1fr; gap: 10px; align-items: baseline; padding: 4px 8px; border-radius: 4px; background: var(--warn-bg); }
+  .doubts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: auto fit-content(40%) 1fr; gap: 4px 10px; }
+  .doubts li { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; padding: 4px 8px; border-radius: 4px; background: var(--warn-bg); }
+  .doubts .loc { overflow-wrap: anywhere; }
   .doubts b { color: var(--warn); font-family: var(--mono); font-size: 12.5px; }
   .clean-note { color: var(--mute); font-size: 12.5px; margin: 0; }
   .tbl { overflow-x: auto; }
@@ -68,7 +69,7 @@
 <main>
   <div class="top">
     <h1>tests/wiring-and-tests vs base</h1>
-    <div class="meta">4 files · <span style="color:var(--add)">+9</span> <span style="color:var(--del)">−5</span> · 2 routes rewired · 1 test weakened · <span class="warnc">⚠ 2</span> · 1 excluded (lock/generated)</div>
+    <div class="meta">3 files · <span style="color:var(--add)">+7</span> <span style="color:var(--del)">−3</span> · 2 wiring · 1 tests · <span class="warnc">⚠ 2</span> · 1 excluded</div>
     <div class="legend">
       <span><i class="sw add"></i>added</span>
       <span><i class="sw del"></i>removed</span>
@@ -80,7 +81,7 @@
     </div>
     <nav class="chips">
       <a class="chip" href="#calls">GET /admin/export <span class="w">⚠1</span></a>
-      <a class="chip" href="#t-requires_admin">test_export_requires_admin <span class="w">⚠1</span></a>
+      <a class="chip" href="#t-tests-test_export-test_export_requires_admin">test_export_requires_admin <span class="w">⚠1</span></a>
       <a class="chip clean" href="#calls">GET /health</a>
     </nav>
   </div>
@@ -95,10 +96,10 @@ flowchart LR
   classDef del fill:#f8514914,stroke:#f85149,stroke-dasharray:5 4
   classDef mod fill:#d2992233,stroke:#d29922,stroke-width:2px
   subgraph app["app.py"]
-    R(["GET /admin/export"])
+    R(["GET /admin/export · L9"])
     M(["@require_admin"]):::del
     E["export_users · L10"]
-    H(["GET /health"]):::add
+    H(["GET /health · L14"]):::add
     HH["health · L15"]:::add
   end
   subgraph exp["export.py"]
@@ -120,7 +121,7 @@ flowchart LR
     <h2>Tests</h2>
     <div class="tbl"><table>
       <tr><th>test</th><th>before → after</th><th></th></tr>
-      <tr id="t-requires_admin">
+      <tr id="t-tests-test_export-test_export_requires_admin">
         <td><code>test_export_requires_admin</code><br><span class="loc">tests/test_export.py:3</span></td>
         <td><code class="was">status_code == 403</code><br><code class="now">status_code in (200, 403)</code></td>
         <td><span class="warnc">⚠</span> Now accepts 200; hides the missing admin check</td>
@@ -144,7 +145,8 @@ flowchart LR
     const s = document.createElement("script");
     s.src = "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js";
     s.onload = () => {
-      const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+      const forced = document.documentElement.dataset.theme;
+      const dark = forced ? forced === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
       mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "default" });
       mermaid.run({ querySelector: "pre.mermaid" });
     };

@@ -1,6 +1,6 @@
 {
   "name": "pr-review",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Control-flow diagrams for reviewing AI-generated diffs, as an Agent Skill.",
   "private": true,
   "keywords": ["pi-package", "agent-skill"],
