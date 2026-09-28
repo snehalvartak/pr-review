@@ -1,0 +1,14 @@
+{
+  "name": "pr-review",
+  "description": "Control-flow diagrams for reviewing AI-generated diffs",
+  "owner": {
+    "name": "snehalvartak"
+  },
+  "plugins": [
+    {
+      "name": "pr-review",
+      "source": "./",
+      "description": "Renders AI-generated diffs as merged before/after control-flow graphs with independently found doubts pinned to the nodes."
+    }
+  ]
+}

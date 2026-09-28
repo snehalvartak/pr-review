@@ -1,6 +1,7 @@
 ---
 name: pr-review
 description: Use when reviewing AI-generated code changes (a diff, working tree changes, or a branch) and the reviewer needs to see quickly how control flow changed — new branches, loops, early returns, removed error paths, changed call contracts, rewired routes or handlers, weakened tests — rather than read an explanation of the diff.
+compatibility: Requires git. Uses subagents and an HTML artifact tool when the agent has them; works without either.
 ---
 
 # PR Review
@@ -33,6 +34,11 @@ lockfiles, vendored deps, minified/bundled output, binaries, and generated
 files (a `generated`/`do not edit` header, `*.pb.*`, `*_gen.*`,
 snapshots, `dist/`/`build/`).
 
+If the repo root has `.prreviewignore` (one glob per line, `#` comments,
+`**` crosses directories), exclude those paths too — pass each as
+`':(exclude,glob)<pattern>'` to `git diff` (prefix `**/` when the pattern
+has no `/`) so excluded files are never read.
+
 ### 2. Detect moves
 
 Run `git diff -M -C --color-moved=zebra` over the same scope. Code that
@@ -58,6 +64,7 @@ the hunk alone. Put each change in exactly one bucket:
 | **Interaction** | The changed flow crosses a component boundary (HTTP client ↔ handler, producer ↔ consumer, emit ↔ listener) or its correctness depends on ordering/concurrency (awaits, locks, parallel tasks, retries across a call) | Delta sequence diagram |
 | **Wiring** | Code outside functions that changes *what runs*: route/handler tables, middleware or decorator registration, DI bindings, feature flags, cron/queue subscriptions, exported entry points | Nodes and edges in the Calls graph |
 | **Value** | Same flow; an expression, constant, default arg, config value, or signature changed | One row: old → new |
+| **Shape** | A returned object, API request/response, event payload, DB schema, or struct/type gained, lost, renamed, or retyped fields | One row: key diff `+new −old ~retyped` |
 | **Tests** | Test files | Rows for weakened assertions only (see below) |
 | **Rest** | Formatting, renames, comments, imports, docs, pure moves | One line: path +a −d |
 
@@ -75,17 +82,22 @@ New tests and strengthened assertions → one Rest line for the file.
 
 ### 4. Find callers
 
-For every Flow/Interaction/Value function whose return values, raised
-errors, params, or side effects changed, grep its call sites. These feed
+For every Flow/Interaction/Value/Shape item whose return values, raised
+errors, params, fields, or side effects changed, grep its call sites. These feed
 the Calls graph and the independent check.
 
 ### 5. Independent check — all at once, in parallel
 
-One subagent per Flow/Interaction/Value/Wiring item (batch trivial ones),
+One subagent per Flow/Interaction/Value/Shape/Wiring item (batch trivial ones),
 plus one for all Tests rows. Give it only: before source, after source,
 call sites (for Tests: the old and new test plus the code under test).
 **Not** the conversation, the intent, or your diagram — independence is
 the point.
+
+No subagent tool (e.g. pi)? Run each check yourself as a separate pass
+*before* drawing: read only the before/after source and callers, write the
+doubts down, then move on. Weaker than a fresh context, still better than
+checking against your own diagram.
 
 Ask it to return doubts only, each as `L<line> | ≤10 words`, max 3, ranked
 by impact, or `clean`. Correctness only: edge cases, error paths,
@@ -136,7 +148,10 @@ callers or any Wiring changed): changed functions, their direct callers,
 and Wiring entry points as stadium nodes (`R(["GET /orders"])`,
 `F(["flag new_checkout"])`, `M(["auth middleware"])`). Color by delta as
 above; a removed registration is a `del` node or `-.-x` edge. Label a
-caller edge only when its contract changed: `C -->|"may get None ⚠"| F`.
+caller edge only when its contract changed: `C -->|"may get None ⚠"| F`
+or `C -->|"loses .total ⚠"| F`. When nodes span 2+ modules, group each
+module in a lane: `subgraph api["src/api"]` … `end`, then
+`class api,web lane` — lanes only, no nesting.
 
 **Large diffs**: full diagrams for at most **8** Flow/Interaction items —
 the top 8 by ⚠ count, then by node delta. The rest go in the "More flows"
@@ -144,17 +159,21 @@ table as one row each (fn, file:line, nodes +a −d, ⚠ text). Every item
 still gets its independent check.
 
 **Order**: diagram sections by ⚠ count desc, then node delta. Header chips
-follow the same order and include Value and Tests rows with ⚠.
+follow the same order and include Value, Shape, and Tests rows with ⚠.
 
 ### 7. Publish
 
-Load `artifact-design` (required by the Artifact tool; the template already
-follows its contract). Publish via the `Artifact` tool with `icon: "flow"`.
-No Artifact tool available → write the file into the repo's scratch/temp
-dir and give the path.
+- **Artifact tool available** (Claude Code / claude.ai): load
+  `artifact-design` (the tool requires it; the template already follows
+  its contract), then publish with `icon: "flow"`.
+- **Otherwise** (Cursor, OpenCode, pi, …): write the page to
+  `$(git rev-parse --git-dir)/pr-review/report.html` — inside `.git`, so
+  it is never committed — open it (`open` on macOS, `xdg-open` on Linux),
+  and give the path. The page loads Mermaid from a CDN when opened
+  locally.
 
 Chat reply: the link and one line —
-`N flows · M value changes · T test rows · K ⚠`. Nothing else.
+`N flows · M value/shape changes · T test rows · K ⚠`. Nothing else.
 
 ## Common Mistakes
 
@@ -170,7 +189,8 @@ Chat reply: the link and one line —
 | Moved code shown as delete + add | Detect moves first; diff the moved body against its old self |
 | Flowchart for a client↔server or producer↔consumer change | Use a sequence diagram |
 | 30 full diagrams on one page | Top 8 drawn; the rest are "More flows" rows |
-| Charting lockfiles or generated code | Exclude; count them in the header |
+| Charting lockfiles or generated code | Exclude; count them in the header; honor `.prreviewignore` |
+| Returned dict/payload keys changed, filed as Value | Shape row with a key diff; label the caller edge with what it loses |
 | Adding a summary, "why", or diff excerpt | The reader has git; the page is diagrams, rows, and ⚠ lines only |
 | Giving the subagent intent or your graph | Before/after source + callers only |
 | Doubts phrased as confirmed bugs, or >3 per item | ≤3, ranked, ≤10 words, stated as doubts |
