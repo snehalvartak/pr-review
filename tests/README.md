@@ -1,5 +1,18 @@
 # Test fixtures
 
+Each fixture has a `base/` tree (the code before the change) and a
+`diff.patch`. Build a scratch repo with the base committed and the patch
+applied to the working tree, then run the skill there with the default
+scope:
+
+```sh
+tests/setup.sh diff-with-bug          # prints the repo path (a temp dir)
+tests/setup.sh wiring-and-tests /tmp/wt
+```
+
+The `wiring-and-tests` rename lands as an untracked `export.py`, so it
+also checks that the default scope picks up untracked files.
+
 ## diff-with-bug/diff.patch
 
 A two-intent diff with two planted issues, used to verify the skill's
@@ -45,7 +58,8 @@ Covers the non-function cases:
 - `app.py` and `export.py` nodes sit in separate lanes.
 - The weakened assertion appears as a Tests row with a ⚠ doubt.
 - The move is one `(moved)` line, not a delete plus an add.
-- The lockfile is counted as excluded, not charted.
+- The lockfile is counted as excluded, not charted, and left out of the
+  file and +/− totals.
 
 [`example-report.html`](wiring-and-tests/example-report.html) is a
 reference render.

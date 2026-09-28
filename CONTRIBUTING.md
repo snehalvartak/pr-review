@@ -9,8 +9,9 @@ to see if it's already been reported.
 
 When filing a bug, include:
 
+- The agent you ran it in (Claude Code, Cursor, OpenCode, pi) and its version.
 - The scope you invoked the skill with (default working-tree diff, `branch`,
-  or a custom range/description).
+  or a custom commit range).
 - What you expected to happen vs. what actually happened.
 - The diff (or a minimal reproduction of it) that triggered the issue, if
   you can share it.
@@ -28,9 +29,10 @@ awkward or unsupported, and what outcome you'd want instead.
    the rationale behind its design is in
    [`docs/2026-08-09-guided-review-design.md`](docs/2026-08-09-guided-review-design.md).
 3. Test your change against the fixtures in [`tests/`](tests/README.md) —
-   at minimum, run the skill against `tests/diff-with-bug/diff.patch` and
-   confirm it meets the passing criteria in [`tests/README.md`](tests/README.md).
-   Add a new fixture under `tests/` if your change affects classification,
+   at minimum, build the `diff-with-bug` repo with `tests/setup.sh diff-with-bug`,
+   run the skill there, and confirm it meets the passing criteria in
+   [`tests/README.md`](tests/README.md).
+   Add a new fixture (`base/` + `diff.patch`) under `tests/` if your change affects classification,
    diagram rules, or the independent-check step in a way the existing
    fixture doesn't exercise.
 4. Update `README.md` and/or `SKILL.md` if you changed user-facing behavior.

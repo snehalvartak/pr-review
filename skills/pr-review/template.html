@@ -2,7 +2,11 @@
 <!--
   Flow-delta report template. Fill every {{…}} and repeat the marked blocks.
   Delete any section that would be empty (no callers, no value changes, etc.).
-  Mermaid text inside <pre class="mermaid"> must HTML-escape < > & in labels.
+  HTML-escape < > & in everything filled in (labels, cells, doubts, headings);
+  inside Mermaid labels also write " as #quot;. Never use `end` as a node ID.
+  {{ID}} = path + name, slugged (src-api-orders-create), so anchors stay unique.
+  Opened as a local file? Prepend <!doctype html><meta charset="utf-8"> and a
+  viewport meta; the Artifact tool adds its own skeleton.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
@@ -53,8 +57,9 @@
   .graph { overflow-x: auto; }
   .graph svg { max-width: min(100%, 760px) !important; height: auto; }
   .graph pre.mermaid { margin: 0; background: none; font-size: 13px; }
-  .doubts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-  .doubts li { display: grid; grid-template-columns: 2.4em 4.5em 1fr; gap: 10px; align-items: baseline; padding: 4px 8px; border-radius: 4px; background: var(--warn-bg); }
+  .doubts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: auto fit-content(40%) 1fr; gap: 4px 10px; }
+  .doubts li { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; padding: 4px 8px; border-radius: 4px; background: var(--warn-bg); }
+  .doubts .loc { overflow-wrap: anywhere; }
   .doubts b { color: var(--warn); font-family: var(--mono); font-size: 12.5px; }
   .clean-note { color: var(--mute); font-size: 12.5px; margin: 0; }
   .tbl { overflow-x: auto; }
@@ -73,7 +78,8 @@
 <main>
   <div class="top">
     <h1>{{SCOPE — e.g. feature/retry vs main}}</h1>
-    <div class="meta">{{N}} files · <span style="color:var(--add)">+{{ADD}}</span> <span style="color:var(--del)">−{{DEL}}</span> · {{F}} flows changed · <span class="warnc">⚠ {{W}}</span> · {{X}} excluded (lock/generated)</div>
+    <!-- drop any zero count; excluded files are not in the file or +/− totals -->
+    <div class="meta">{{N}} files · <span style="color:var(--add)">+{{ADD}}</span> <span style="color:var(--del)">−{{DEL}}</span> · {{F}} flows · {{R}} wiring · {{V}} value/shape · {{T}} tests · <span class="warnc">⚠ {{K}}</span> · {{X}} excluded</div>
     <div class="legend">
       <span><i class="sw add"></i>added</span>
       <span><i class="sw del"></i>removed</span>
@@ -84,16 +90,18 @@
       <span class="warnc">⚠n doubt</span>
     </div>
     <nav class="chips">
-      <!-- one chip per flow section, same order as sections; class "clean" when ⚠ 0 -->
+      <!-- one chip per Flow/Interaction section and More flows row, plus Value/Shape/Tests rows with ⚠;
+           Wiring items link to #calls. Order as SKILL.md "Order". ⚠ 0: class "clean", drop the ⚠ span -->
       <a class="chip" href="#f-{{ID}}">{{fn}} <span class="w">⚠{{n}}</span></a>
     </nav>
   </div>
 
-  <!-- CALLS: omit if no changed function has callers and no Wiring changed.
-       Wiring entry points are stadium nodes: R(["GET /orders"]):::add
-       Nodes from 2+ modules: one lane each, subgraph api["src/api"] … end, then class api,web lane -->
-  <section id="calls">
-    <h2>Calls</h2>
+  <!-- CALLS: omit if no changed function has callers, none was deleted, and no Wiring changed.
+       Wiring entry points are stadium nodes with lines: R(["GET /orders · L12"]):::add
+       Nodes from 2+ modules: one lane each, subgraph api["src/api"] … end, then class api,web lane
+       Add class "hot" and the ⚠ count when Wiring doubts exist; drop both otherwise -->
+  <section id="calls" class="hot">
+    <h2>Calls <span class="warnc">⚠ {{n}}</span></h2>
     <div class="graph"><pre class="mermaid">
 flowchart LR
   classDef default fill:#8b949e14,stroke:#8b949e
@@ -103,6 +111,9 @@ flowchart LR
   classDef mod fill:#d2992233,stroke:#d29922,stroke-width:2px
   {{CALL GRAPH}}
     </pre></div>
+    <ol class="doubts">
+      <li><b>⚠1</b><span class="loc">{{path}}:{{line}}</span><span>{{≤10 words}}</span></li>
+    </ol>
   </section>
 
   <!-- FLOW: repeat per function whose control flow changed; add class "hot" when ⚠ > 0 -->
@@ -204,7 +215,8 @@ sequenceDiagram
     const s = document.createElement("script");
     s.src = "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js";
     s.onload = () => {
-      const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+      const forced = document.documentElement.dataset.theme;
+      const dark = forced ? forced === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
       mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "default" });
       mermaid.run({ querySelector: "pre.mermaid" });
     };

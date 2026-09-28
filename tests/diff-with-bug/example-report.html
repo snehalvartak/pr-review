@@ -48,8 +48,9 @@
   .graph { overflow-x: auto; }
   .graph svg { max-width: min(100%, 760px) !important; height: auto; }
   .graph pre.mermaid { margin: 0; background: none; font-size: 13px; }
-  .doubts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-  .doubts li { display: grid; grid-template-columns: 2.4em 4.5em 1fr; gap: 10px; align-items: baseline; padding: 4px 8px; border-radius: 4px; background: var(--warn-bg); }
+  .doubts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: auto fit-content(40%) 1fr; gap: 4px 10px; }
+  .doubts li { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; padding: 4px 8px; border-radius: 4px; background: var(--warn-bg); }
+  .doubts .loc { overflow-wrap: anywhere; }
   .doubts b { color: var(--warn); font-family: var(--mono); font-size: 12.5px; }
   .clean-note { color: var(--mute); font-size: 12.5px; margin: 0; }
   .tbl { overflow-x: auto; }
@@ -59,13 +60,16 @@
   .was { color: var(--del); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--del) 50%, transparent); }
   .now { color: var(--add); }
   .files { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; font: 12.5px var(--mono); color: var(--mute); }
+  .was-n { color: var(--del); }
+  .keys { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .retyped { color: var(--mod); }
   .files .a { color: var(--add); } .files .d { color: var(--del); }
 </style>
 
 <main>
   <div class="top">
     <h1>tests/diff-with-bug vs base</h1>
-    <div class="meta">2 files · <span style="color:var(--add)">+12</span> <span style="color:var(--del)">−4</span> · 1 flow changed · <span class="warnc">⚠ 4</span></div>
+    <div class="meta">2 files · <span style="color:var(--add)">+12</span> <span style="color:var(--del)">−4</span> · 1 flow · 1 value/shape · <span class="warnc">⚠ 4</span></div>
     <div class="legend">
       <span><i class="sw add"></i>added</span>
       <span><i class="sw del"></i>removed</span>
@@ -76,12 +80,12 @@
       <span class="warnc">⚠n doubt</span>
     </div>
     <nav class="chips">
-      <a class="chip" href="#f-fetch">fetch <span class="w">⚠3</span></a>
-      <a class="chip" href="#f-page_bounds">page_bounds <span class="w">⚠1</span></a>
+      <a class="chip" href="#f-src-fetch_client-fetch">fetch <span class="w">⚠3</span></a>
+      <a class="chip" href="#f-src-paginate-page_bounds">page_bounds <span class="w">⚠1</span></a>
     </nav>
   </div>
 
-  <section id="f-fetch" class="hot">
+  <section id="f-src-fetch_client-fetch" class="hot">
     <h2><code>fetch</code> <span class="loc">src/fetch_client.py:6</span> <span class="warnc">⚠ 3</span></h2>
     <div class="graph"><pre class="mermaid">
 flowchart TD
@@ -89,7 +93,8 @@ flowchart TD
   classDef add fill:#2ea04326,stroke:#2ea043,stroke-width:2px
   classDef del fill:#f8514914,stroke:#f85149,stroke-dasharray:5 4
   classDef mod fill:#d2992233,stroke:#d29922,stroke-width:2px
-  S(["fetch(url)"]) ==> L{"attempts &lt; 3 ⚠3"}:::add
+  S(["fetch(url) · L6"]) ==> L{"attempts &lt; 3 · L8 ⚠3"}:::add
+  S -.-x G
   L ==>|yes| G["requests.get · L10"]
   G --> R["raise_for_status · L11"]
   R --> J(["return json · L12"])
@@ -111,7 +116,7 @@ flowchart TD
     <h2>Value changes</h2>
     <div class="tbl"><table>
       <tr><th>where</th><th>before → after</th><th></th></tr>
-      <tr id="f-page_bounds">
+      <tr id="f-src-paginate-page_bounds">
         <td><code>page_bounds</code><br><span class="loc">src/paginate.py:2</span></td>
         <td><code class="was">start = page * page_size</code><br><code class="now">start = (page - 1) * page_size</code></td>
         <td><span class="warnc">⚠</span> 0-indexed callers shift one page; page=0 → negative start</td>
@@ -128,7 +133,8 @@ flowchart TD
     const s = document.createElement("script");
     s.src = "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js";
     s.onload = () => {
-      const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+      const forced = document.documentElement.dataset.theme;
+      const dark = forced ? forced === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
       mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "default" });
       mermaid.run({ querySelector: "pre.mermaid" });
     };
