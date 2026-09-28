@@ -1,167 +1,177 @@
 ---
 name: reviewing-ai-diffs
-description: Use when reviewing AI-generated code changes (a diff, working tree changes, or a branch) and the size or unfamiliarity of the change makes it hard to spot subtly-wrong-but-plausible-looking code, or when a diff spans multiple files/concerns and reviewing it all at once would be overwhelming.
+description: Use when reviewing AI-generated code changes (a diff, working tree changes, or a branch) and the reviewer needs to see quickly how control flow changed — new branches, loops, early returns, removed error paths, changed call contracts, rewired routes or handlers, weakened tests — rather than read an explanation of the diff.
 ---
 
 # Reviewing AI Diffs
 
 ## Overview
 
-AI-written code lacks the "why" a human author carries in their head, and
-large diffs compound that into overload. This skill splits a diff into
-intent-grouped chunks, has each independently pre-screened by a subagent,
-and compiles the result into a single visual artifact — one small diagram
-per chunk, doubts marked in place — so you read it at your own pace
-instead of being walked through a chat Q&A.
+The reviewer already has the diff. What they lack is the *shape* change:
+which paths through the code are new, which are gone, and where a caller's
+assumptions just broke. This skill renders that as one page of delta
+diagrams — before and after merged into a single graph, color-coded —
+with independently-found doubts pinned to the nodes that cause them.
 
-## When to Use
-
-- Reviewing a diff (working tree, branch, or commit range) that an AI
-  assistant produced, before committing/merging it.
-- The diff spans multiple files or concerns, or you don't have full context
-  on why each part was written.
-
-Not for: style or over-engineering review, or spec-vs-standards review of a
-finished PR — use a dedicated review skill for those if you have one. This
-skill produces a report to read, not a turn-by-turn chat walkthrough — it
-doesn't ask you to approve, flag, or fix chunks as it goes; any resulting
-code changes are a separate step you take afterward.
+**Visuals, not prose.** No summaries, no "why", no restated diff hunks.
+Every word on the page is a node label, a file:line, or a ≤10-word doubt.
 
 ## Scope
 
-Default: diff of working tree against `HEAD` (`git diff HEAD`) — staged and
-unstaged combined.
+- Default: `git diff HEAD` (staged + unstaged).
+- `branch`: current branch vs. its merge-base with the default branch.
+- `<commit-range>`: that range.
 
-- `reviewing-ai-diffs branch` — diff current branch against its base (e.g. `main`).
-- `reviewing-ai-diffs <commit-range or description>` — user-specified scope.
-- `reviewing-ai-diffs risk-first` (combinable with the above) — compile
-  chunks riskiest-first instead of the intent-order default.
+Empty diff → say so, stop.
 
-If the diff is empty, say so and stop. Don't proceed to chunking.
+## Process
 
-## The Process
+### 1. Filter
 
-### 1. Split the diff into intent chunks
+Drop from everything below, and count as "excluded" in the header:
+lockfiles, vendored deps, minified/bundled output, binaries, and generated
+files (a `generated`/`do not edit` header, `*.pb.*`, `*_gen.*`,
+snapshots, `dist/`/`build/`).
 
-One chunk = one coherent piece of work (e.g. "added retry logic to the
-fetch client"), even if it spans multiple files. Never chunk by file — that
-reintroduces the overload the skill exists to prevent. If a single intent
-still exceeds roughly a screenful (~150 changed lines or ~5 files), split
-it into sub-chunks under the same intent — a chunk the reader can't scan in
-one look defeats the point.
+### 2. Detect moves
 
-Intent source, in priority order:
-1. A plan/spec doc for the work, a linked issue, or recent commit messages
-   — use as ground truth for what each chunk is for.
-2. Otherwise, infer intent from the diff itself, and state the inferred
-   intent explicitly in the chunk (see step 3) so it's clear it's a guess.
+Run `git diff -M -C --color-moved=zebra` over the same scope. Code that
+was moved (renamed file, function relocated, helper extracted) is **one**
+change, not a delete plus an add:
 
-Tag each chunk with a risk category, e.g. `core-logic` / `data-mutation` /
-`auth` (high) vs. `boilerplate` / `formatting` / `tests` (low) — these are
-illustrative, not an exhaustive list; use whatever label fits the change.
+- Moved unchanged → a Rest line: `a.py:fn → b.py:fn (moved)`.
+- Moved and edited → classify it as below, diffing against the *old*
+  body; header gets `moved from a.py:10`.
+- Extracted helper → the parent's chart shows the call as a `mod` node
+  `helper() · L40`; the helper gets its own chart only if its body is
+  not a verbatim move.
 
-Order the chunks intent-order by default (mirrors how a human would
-narrate a PR), or risk-first if named at invocation. No question to ask
-here — the invocation argument is the only override.
+### 3. Classify every change
 
-### 2. Independent check, dispatched in parallel for every chunk
+For each changed function/method, read its **full before and after
+source** (`git show <base>:<path>` and the working file) — never draw from
+the hunk alone. Put each change in exactly one bucket:
 
-For each chunk, dispatch a subagent with the chunk's diff, its surrounding
-code, and the **call sites of any changed functions** (grep for callers —
-contract changes like a new `None` return or flipped indexing only show up
-at the callers). Give it nothing else: not the conversation history, not
-the stated intent, not why the code was written. This independence is the
-point — a subagent with no stake in the code being right, and no exposure
-to the narrative that justified it, catches what a same-context re-read
-misses.
+| Bucket | Test | Rendered as |
+|---|---|---|
+| **Flow** | Branches, loops, returns, raises/throws, try/catch, awaits, or calls added/removed/reordered | Delta flowchart |
+| **Interaction** | The changed flow crosses a component boundary (HTTP client ↔ handler, producer ↔ consumer, emit ↔ listener) or its correctness depends on ordering/concurrency (awaits, locks, parallel tasks, retries across a call) | Delta sequence diagram |
+| **Wiring** | Code outside functions that changes *what runs*: route/handler tables, middleware or decorator registration, DI bindings, feature flags, cron/queue subscriptions, exported entry points | Nodes and edges in the Calls graph |
+| **Value** | Same flow; an expression, constant, default arg, config value, or signature changed | One row: old → new |
+| **Tests** | Test files | Rows for weakened assertions only (see below) |
+| **Rest** | Formatting, renames, comments, imports, docs, pure moves | One line: path +a −d |
 
-Dispatch every chunk's check at once, in parallel — there's no chat pacing
-to hide latency behind, so there's no reason to serialize them. Chunks
-whose risk tag is formatting- or boilerplate-only may share one batched
-check instead of one each.
+New functions are **Flow** (all nodes `add`) unless straight-line.
+Deleted functions: one `del` node in the Calls graph, no chart.
 
-Ask each subagent to return two things:
-1. **What the code appears to do**, in its own words. Compare this against
-   the chunk's stated intent when compiling — a mismatch between apparent
-   behavior and stated intent is itself a top-ranked doubt.
-2. **Concrete doubts**, each anchored to a specific line, call, or node —
-   edge cases, error/null handling, off-by-one, contract changes visible
-   at call sites — or an explicit "no issues found". Never a rubber stamp.
-   The anchor is what lets a doubt be marked directly on the chunk's
-   diagram in step 3 instead of relayed as a separate sentence.
+**Tests** — list only changes that make a test able to pass where it
+previously couldn't. AI edits do this to get green:
+- assertion deleted, or made looser (`==` → `in`/`>=`, exact → `ANY`, `assertRaises` removed)
+- expected value changed (flag ⚠ if the new value merely matches the changed code)
+- test skipped, xfail'd, commented out, or its setup mocks out the code under test
+- `try/except` or `catch` wrapped around the call under test
 
-### 3. Compile the artifact
+New tests and strengthened assertions → one Rest line for the file.
 
-One Artifact, built once all checks are back — not assembled incrementally,
-since there's no per-chunk pause to redeploy between.
+### 4. Find callers
 
-Open with an overview strip: one line per chunk — name, risk tag, doubt
-count — in the order chosen in step 1. This is the whole diff's shape at a
-glance, before any per-chunk detail.
+For every Flow/Interaction/Value function whose return values, raised
+errors, params, or side effects changed, grep its call sites. These feed
+the Calls graph and the independent check.
 
-Then, for each chunk, in that same order:
+### 5. Independent check — all at once, in parallel
 
-- **Header**: name + risk tag.
-- **Why**, only if the intent isn't obvious from the header and diagram
-  alone, or if it's inferred rather than sourced — mark "(inferred)".
-  Skip it when the diagram already makes intent self-evident.
-- **One diagram** — never more than one — sized to the smallest shape that
-  captures what actually changed:
+One subagent per Flow/Interaction/Value/Wiring item (batch trivial ones),
+plus one for all Tests rows. Give it only: before source, after source,
+call sites (for Tests: the old and new test plus the code under test).
+**Not** the conversation, the intent, or your diagram — independence is
+the point.
 
-  | Change shape | Diagram |
-  |---|---|
-  | Control/data flow (retry logic, auth check, request handling) | `mermaid` sequence diagram, or pseudocode |
-  | New or changed call path | Call-tree sketch |
-  | File layout, structural/module reorg | File tree |
-  | UI/component structure | Component tree |
-  | Mostly-new block the reader needs verbatim/copyable | Plain code excerpt (not the full raw diff) |
-  | Nothing above fits (e.g. a single constant/config value) | 2-4 concise prose bullets — the fallback, not the default |
+Ask it to return doubts only, each as `L<line> | ≤10 words`, max 3, ranked
+by impact, or `clean`. Correctness only: edge cases, error paths,
+off-by-one, null/None, contract breaks at call sites, ordering/races,
+tests that no longer test anything. No style.
 
-  When most of the surrounding shape already existed before this chunk and
-  only part of it changed, render that same diagram as a `diff` (only the
-  changed lines/nodes marked, `+`/`-`, rest of the shape implied) instead
-  of redrawing the whole thing — a one-line arithmetic fix inside an
-  unchanged function is a two-line diff snippet, not a full pseudocode
-  block. Show the whole shape, undiffed, only when most of it is new.
-- The chunk's actual diff hunk(s), GitHub-style line coloring
-  (added/removed), placed next to the diagram — the diagram is for fast
-  scanning, the hunk is the ground truth underneath it; never collect the
-  diff separately from the explanation.
-- The subagent's doubts, marked directly on the diagram at the anchor from
-  step 2 — an inline `⚠` note on the relevant line, node, or edge — instead
-  of a separate "Worth checking" list. Cap at the three most material
-  doubts, ranked: relaying every doubt recreates the overload this skill
-  exists to prevent. An intent-vs-apparent-behavior mismatch always makes
-  the cut; style-level nits never do (out of scope here). If doubts were
-  cut by the cap, add one line: "…and N lower-priority doubts." If the
-  subagent found nothing, add no markers and add one line instead:
-  "Independent check: clean."
+### 6. Draw
 
-Load the `artifact-design` skill (bundled with Claude Code/claude.ai, not
-part of this repo — it's the same skill the `Artifact` tool itself asks
-callers to load) before building it.
+Copy `template.html` (next to this file) and fill it in. Delete sections
+that would be empty.
 
-### 4. Publish and hand off
+**Delta flowchart** (Flow; `flowchart TD`): a single graph that is the
+*union* of before and after.
 
-Publish the Artifact and share the link in chat with one short line — total
-chunks, how many carry doubts — not a per-chunk narration of what's
-already on the page. The skill's job ends here: no wrap-up, no follow-up
-questions, no tracking of what gets fixed. Reading the artifact and acting
-on it is a separate step the reader takes on their own.
+| Element | Syntax |
+|---|---|
+| Node unchanged | `A["label · L12"]` |
+| Node added | `A["label · L12"]:::add` |
+| Node removed | `A["label"]:::del` (no line — it's gone) |
+| Node changed in place | `A["new label · L12"]:::mod` |
+| Edge unchanged / added / removed | `-->` / `==>` / `-.-x` |
+| Branch condition | `A{"cond"}` — ≤3 words, diamonds grow fast |
+| Entry / exit | `A(["name(args)"])` / `A(["return x · L20"])` |
+
+**Delta sequence diagram** (Interaction; `sequenceDiagram`): participants
+are components (functions, services, queues), not lines of code.
+
+| Element | Syntax |
+|---|---|
+| Message unchanged | `A->>B: label · L12` |
+| Message added | wrap in `rect rgba(46,160,67,0.15)` … `end` |
+| Message removed | `A--xB: ✗ label` wrapped in `rect rgba(248,81,73,0.12)` … `end` |
+| Concurrency | `par` / `and` / `end` blocks; `loop`, `alt`, `opt` as needed |
+
+Rules for both:
+- Every surviving node/message carries its after-file line number — this
+  is how the reader jumps to the diff, and how a wrong graph gets caught.
+- Labels ≤5 words, code-ish (`raise_for_status`, `retry ≤3`), no sentences.
+- Show removed exits explicitly (`raise to caller`, `return 404`) — a
+  vanished error path is the most-missed change in AI diffs.
+- ≤15 nodes/messages. Collapse untouched stretches: `["… 8 lines"]`.
+- Append `⚠n` to the label each doubt anchors to; list doubt text under
+  the diagram.
+- HTML-escape `<`, `>`, `&` inside labels.
+
+**Calls graph** (`flowchart LR`; include if any changed function has
+callers or any Wiring changed): changed functions, their direct callers,
+and Wiring entry points as stadium nodes (`R(["GET /orders"])`,
+`F(["flag new_checkout"])`, `M(["auth middleware"])`). Color by delta as
+above; a removed registration is a `del` node or `-.-x` edge. Label a
+caller edge only when its contract changed: `C -->|"may get None ⚠"| F`.
+
+**Large diffs**: full diagrams for at most **8** Flow/Interaction items —
+the top 8 by ⚠ count, then by node delta. The rest go in the "More flows"
+table as one row each (fn, file:line, nodes +a −d, ⚠ text). Every item
+still gets its independent check.
+
+**Order**: diagram sections by ⚠ count desc, then node delta. Header chips
+follow the same order and include Value and Tests rows with ⚠.
+
+### 7. Publish
+
+Load `artifact-design` (required by the Artifact tool; the template already
+follows its contract). Publish via the `Artifact` tool with `icon: "flow"`.
+No Artifact tool available → write the file into the repo's scratch/temp
+dir and give the path.
+
+Chat reply: the link and one line —
+`N flows · M value changes · T test rows · K ⚠`. Nothing else.
 
 ## Common Mistakes
 
 | Mistake | Fix |
 |---|---|
-| Chunking by file instead of by intent | Group by what changed *together for a reason*, even across files |
-| Skipping the independent subagent check to save time | It's the step that catches plausible-but-wrong code; the artifact's value collapses without it |
-| Dispatching chunk checks one at a time | Dispatch all of them in parallel — nothing paces them anymore |
-| Subagent's doubts stated as confirmed bugs | Mark as a doubt on the diagram, not a confirmed bug — the subagent can be wrong too |
-| Marking every subagent doubt on the diagram | Three most material, ranked — a wall of markers is its own overload |
-| Giving the subagent only the diff hunk, no callers | Contract changes (new `None` return, flipped indexing) are invisible without call sites |
-| Defaulting to prose bullets for a chunk | Prose is the fallback only when no diagram shape fits — pick the smallest matching diagram first |
-| Stacking more than one diagram for a single chunk | Pick one shape — the point is the smallest fitting view, not full coverage |
-| Writing a Why line when the diagram already makes intent obvious | Skip it — only state Why when it's non-obvious or inferred |
-| Showing the diagram without the actual diff hunk next to it | The diagram is for scanning, not a replacement for the real code — keep both, anchored together |
-| Narrating chunks in chat while or after building the artifact | One short line with the link and a count — the artifact is the content, chat isn't a second copy of it |
-| Asking whether to build the artifact, or waiting for per-chunk approval before continuing | Neither exists anymore — always build the artifact, compile every chunk, publish once |
+| Drawing before and after as two graphs | One merged graph; color carries the delta |
+| Drawing from the hunk | Read full before/after source; hunks hide the surrounding branches |
+| Flowchart for a one-expression change | That's a Value row |
+| Missing the removed error path | Draw the old exit as a `del` node with a `-.-x` edge |
+| Nodes without line numbers | Every surviving node gets `· L<n>` |
+| Route/flag/middleware change filed under Rest | That's Wiring — it changes what runs; put it in the Calls graph |
+| Test edits filed under Rest | Weakened assertions, skips, and changed expectations get Tests rows |
+| Moved code shown as delete + add | Detect moves first; diff the moved body against its old self |
+| Flowchart for a client↔server or producer↔consumer change | Use a sequence diagram |
+| 30 full diagrams on one page | Top 8 drawn; the rest are "More flows" rows |
+| Charting lockfiles or generated code | Exclude; count them in the header |
+| Adding a summary, "why", or diff excerpt | The reader has git; the page is diagrams, rows, and ⚠ lines only |
+| Giving the subagent intent or your graph | Before/after source + callers only |
+| Doubts phrased as confirmed bugs, or >3 per item | ≤3, ranked, ≤10 words, stated as doubts |
+| Narrating the report in chat | Link + one count line |

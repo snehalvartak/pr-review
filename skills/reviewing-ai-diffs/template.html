@@ -1,0 +1,196 @@
+<title>{{SHORT_NAME}} flow</title>
+<!--
+  Flow-delta report template. Fill every {{…}} and repeat the marked blocks.
+  Delete any section that would be empty (no callers, no value changes, etc.).
+  Mermaid text inside <pre class="mermaid"> must HTML-escape < > & in labels.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+  :root {
+    --bg: #f7f8fa; --panel: #ffffff; --ink: #1c2128; --mute: #636c76; --line: #d8dee4;
+    --add: #1a7f37; --add-bg: #dafbe1; --del: #cf222e; --del-bg: #ffebe9;
+    --mod: #9a6700; --mod-bg: #fff8c5; --warn: #bc4c00; --warn-bg: #fff1e5;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0f1216; --panel: #161b22; --ink: #e6edf3; --mute: #8d96a0; --line: #30363d;
+      --add: #3fb950; --add-bg: #12261a; --del: #f85149; --del-bg: #2d1416;
+      --mod: #d29922; --mod-bg: #2b2111; --warn: #f0883e; --warn-bg: #2d1c10;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f1216; --panel: #161b22; --ink: #e6edf3; --mute: #8d96a0; --line: #30363d;
+    --add: #3fb950; --add-bg: #12261a; --del: #f85149; --del-bg: #2d1416;
+    --mod: #d29922; --mod-bg: #2b2111; --warn: #f0883e; --warn-bg: #2d1c10;
+  }
+  body { background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); padding: 20px 16px 48px; }
+  main { max-width: 1100px; margin: 0 auto; display: grid; gap: 20px; }
+  code, .loc, .mono { font-family: var(--mono); font-size: 12.5px; }
+  h1 { font: 600 18px/1.3 var(--mono); margin: 0; text-wrap: balance; overflow-wrap: anywhere; }
+  h2 { font: 600 14px/1.3 var(--sans); margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+  h2 code { font-size: 14px; }
+  .loc { color: var(--mute); }
+  .meta { color: var(--mute); font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .top { display: grid; gap: 10px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--mute); align-items: center; }
+  .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 2px solid; vertical-align: -2px; margin-right: 4px; }
+  .sw.add { background: var(--add-bg); border-color: var(--add); }
+  .sw.del { background: var(--del-bg); border-color: var(--del); border-style: dashed; }
+  .sw.mod { background: var(--mod-bg); border-color: var(--mod); }
+  .sw.same { background: transparent; border-color: var(--mute); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font: 12.5px var(--mono); color: var(--ink); text-decoration: none; padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); }
+  .chip:hover, .chip:focus-visible { border-color: var(--mute); outline: none; }
+  .chip .w, .warnc { color: var(--warn); font-weight: 600; }
+  .chip.clean { color: var(--mute); }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 12px; scroll-margin-top: 12px; }
+  section.hot { border-left: 3px solid var(--warn); }
+  .graph { overflow-x: auto; }
+  .graph svg { max-width: min(100%, 760px) !important; height: auto; }
+  .graph pre.mermaid { margin: 0; background: none; font-size: 13px; }
+  .doubts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .doubts li { display: grid; grid-template-columns: 2.4em 4.5em 1fr; gap: 10px; align-items: baseline; padding: 4px 8px; border-radius: 4px; background: var(--warn-bg); }
+  .doubts b { color: var(--warn); font-family: var(--mono); font-size: 12.5px; }
+  .clean-note { color: var(--mute); font-size: 12.5px; margin: 0; }
+  .tbl { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  td, th { text-align: left; padding: 6px 10px 6px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 600; color: var(--mute); font-size: 12px; border-top: none; }
+  .was { color: var(--del); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--del) 50%, transparent); }
+  .now { color: var(--add); }
+  .files { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; font: 12.5px var(--mono); color: var(--mute); }
+  .was-n { color: var(--del); }
+  .files .a { color: var(--add); } .files .d { color: var(--del); }
+</style>
+
+<main>
+  <div class="top">
+    <h1>{{SCOPE — e.g. feature/retry vs main}}</h1>
+    <div class="meta">{{N}} files · <span style="color:var(--add)">+{{ADD}}</span> <span style="color:var(--del)">−{{DEL}}</span> · {{F}} flows changed · <span class="warnc">⚠ {{W}}</span> · {{X}} excluded (lock/generated)</div>
+    <div class="legend">
+      <span><i class="sw add"></i>added</span>
+      <span><i class="sw del"></i>removed</span>
+      <span><i class="sw mod"></i>changed</span>
+      <span><i class="sw same"></i>unchanged</span>
+      <span><code>══▶</code> new edge</span>
+      <span><code>┄┄✕</code> removed edge</span>
+      <span class="warnc">⚠n doubt</span>
+    </div>
+    <nav class="chips">
+      <!-- one chip per flow section, same order as sections; class "clean" when ⚠ 0 -->
+      <a class="chip" href="#f-{{ID}}">{{fn}} <span class="w">⚠{{n}}</span></a>
+    </nav>
+  </div>
+
+  <!-- CALLS: omit if no changed function has callers and no Wiring changed.
+       Wiring entry points are stadium nodes: R(["GET /orders"]):::add -->
+  <section id="calls">
+    <h2>Calls</h2>
+    <div class="graph"><pre class="mermaid">
+flowchart LR
+  classDef default fill:#8b949e14,stroke:#8b949e
+  classDef add fill:#2ea04326,stroke:#2ea043,stroke-width:2px
+  classDef del fill:#f8514914,stroke:#f85149,stroke-dasharray:5 4
+  classDef mod fill:#d2992233,stroke:#d29922,stroke-width:2px
+  {{CALL GRAPH}}
+    </pre></div>
+  </section>
+
+  <!-- FLOW: repeat per function whose control flow changed; add class "hot" when ⚠ > 0 -->
+  <section id="f-{{ID}}" class="hot">
+    <h2><code>{{fn}}</code> <span class="loc">{{path}}:{{line}}</span> <span class="warnc">⚠ {{n}}</span></h2>
+    <!-- if moved: add <span class="loc">moved from {{old path}}:{{line}}</span> to the h2 -->
+    <div class="graph"><pre class="mermaid">
+flowchart TD
+  classDef default fill:#8b949e14,stroke:#8b949e
+  classDef add fill:#2ea04326,stroke:#2ea043,stroke-width:2px
+  classDef del fill:#f8514914,stroke:#f85149,stroke-dasharray:5 4
+  classDef mod fill:#d2992233,stroke:#d29922,stroke-width:2px
+  {{DELTA FLOWCHART}}
+    </pre></div>
+    <ol class="doubts">
+      <li><b>⚠1</b><span class="loc">L{{n}}</span><span>{{≤10 words}}</span></li>
+    </ol>
+    <!-- when no doubts, replace the list with: <p class="clean-note">Independent check: clean</p> -->
+  </section>
+
+  <!-- INTERACTION: repeat per cross-component / ordering-dependent change; same h2 + doubts as FLOW -->
+  <section id="f-{{ID}}" class="hot">
+    <h2><code>{{entry}}</code> <span class="loc">{{path}}:{{line}}</span> <span class="warnc">⚠ {{n}}</span></h2>
+    <div class="graph"><pre class="mermaid">
+sequenceDiagram
+  {{DELTA SEQUENCE — added: rect rgba(46,160,67,0.15) … end; removed: A--xB: ✗ label inside rect rgba(248,81,73,0.12) … end}}
+    </pre></div>
+    <ol class="doubts">
+      <li><b>⚠1</b><span class="loc">L{{n}}</span><span>{{≤10 words}}</span></li>
+    </ol>
+  </section>
+
+  <!-- MORE FLOWS: omit unless more than 8 Flow/Interaction items -->
+  <section id="more">
+    <h2>More flows</h2>
+    <div class="tbl"><table>
+      <tr><th>where</th><th>nodes</th><th></th></tr>
+      <tr id="f-{{ID}}">
+        <td><code>{{fn}}</code><br><span class="loc">{{path}}:{{line}}</span></td>
+        <td class="mono"><span class="now">+{{a}}</span> <span class="was-n">−{{d}}</span></td>
+        <td><span class="warnc">⚠</span> {{≤10 words, or empty}}</td>
+      </tr>
+    </table></div>
+  </section>
+
+  <!-- VALUES: omit if none. Functions whose flow is unchanged but an expression/constant/signature changed -->
+  <section id="values">
+    <h2>Value changes</h2>
+    <div class="tbl"><table>
+      <tr><th>where</th><th>before → after</th><th></th></tr>
+      <tr id="f-{{ID}}">
+        <td><code>{{fn}}</code><br><span class="loc">{{path}}:{{line}}</span></td>
+        <td><code class="was">{{old expr}}</code><br><code class="now">{{new expr}}</code></td>
+        <td><span class="warnc">⚠</span> {{≤10 words, or empty}}</td>
+      </tr>
+    </table></div>
+  </section>
+
+  <!-- TESTS: omit if none. Only changes that let a test pass where it previously couldn't -->
+  <section id="tests">
+    <h2>Tests</h2>
+    <div class="tbl"><table>
+      <tr><th>test</th><th>before → after</th><th></th></tr>
+      <tr id="t-{{ID}}">
+        <td><code>{{test name}}</code><br><span class="loc">{{path}}:{{line}}</span></td>
+        <td><code class="was">{{old assertion / "(active)"}}</code><br><code class="now">{{new assertion / "(deleted)" / "@skip"}}</code></td>
+        <td><span class="warnc">⚠</span> {{≤10 words, or empty}}</td>
+      </tr>
+    </table></div>
+  </section>
+
+  <!-- REST: omit if none. Moved-unchanged code: <span>a.py:fn → b.py:fn (moved)</span> -->
+  <section id="rest">
+    <h2>No flow change</h2>
+    <p class="files">
+      <span>{{path}} <span class="a">+{{a}}</span> <span class="d">−{{d}}</span></span>
+    </p>
+  </section>
+</main>
+
+<script>
+  // Artifacts render <pre class="mermaid"> natively. When opened as a plain
+  // local file, fall back to loading Mermaid once.
+  window.addEventListener("load", () => setTimeout(() => {
+    if (document.querySelector(".mermaid svg") || !document.querySelector("pre.mermaid")) return;
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js";
+    s.onload = () => {
+      const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+      mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "default" });
+      mermaid.run({ querySelector: "pre.mermaid" });
+    };
+    document.head.appendChild(s);
+  }, 800));
+</script>
